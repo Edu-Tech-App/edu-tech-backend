@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('calificaciones')
@@ -24,10 +31,16 @@ export class Grade {
   @Column({ name: 'docente_id' })
   docenteId: number;
 
-  @Column({ name: 'valor_anterior', type: 'decimal', precision: 4, scale: 2, nullable: true })
+  @Column({
+    name: 'valor_anterior',
+    type: 'decimal',
+    precision: 4,
+    scale: 2,
+    nullable: true,
+  })
   valorAnterior: number | null;
 
-  @Column({ name: 'actualizado_por', nullable: true })
+  @Column({ name: 'actualizado_por', type: 'int', nullable: true })
   actualizadoPor: number | null;
 
   // Relaciones
