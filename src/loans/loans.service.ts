@@ -8,6 +8,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Loan, LoanStatus } from './entities/loan.entity';
 import { Fine, FineStatus } from './entities/fine.entity';
 import { Book, BookStatus } from '../books/entities/book.entity';
+import { Payment, PaymentStatus } from './entities/payment.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateLoanDto } from './dto/create-loan.dto';
 
@@ -22,6 +23,8 @@ export class LoansService {
     private userRepository: Repository<User>,
     @InjectRepository(Fine)
     private fineRepository: Repository<Fine>,
+    @InjectRepository(Payment)
+    private paymentRepository: Repository<Payment>,
     private dataSource: DataSource,
   ) {}
 
@@ -163,6 +166,57 @@ export class LoansService {
 
       await queryRunner.commitTransaction();
       return prestamoActualizado;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async payFine(multaId: number): Promise<Payment> {
+    const multa = await this.fineRepository.findOneBy({ id: multaId });
+
+    if (!multa) {
+      throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
+    }
+
+    if (multa.estado !== FineStatus.PENDIENTE) {
+      throw new BadRequestException('La multa ya está pagada o anulada');
+    }
+
+    // Simular respuesta de la pasarela de pagos
+    const isApproved = Math.random() > 0.2; // 80% de probabilidad de éxito
+    const referenciaPasarela = 'REF-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    const paymentStatus = isApproved ? PaymentStatus.APROBADO : PaymentStatus.RECHAZADO;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const payment = this.paymentRepository.create({
+        multaId: multa.id,
+        monto: multa.monto,
+        referenciaPasarela: referenciaPasarela,
+        estado: paymentStatus,
+      });
+
+      const savedPayment = await queryRunner.manager.save(payment);
+
+      if (isApproved) {
+        multa.estado = FineStatus.PAGADA;
+        await queryRunner.manager.save(multa);
+      }
+
+      await queryRunner.commitTransaction();
+
+      if (!isApproved) {
+        throw new BadRequestException('El pago fue RECHAZADO por la pasarela simulada');
+      }
+
+      return savedPayment;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

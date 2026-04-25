@@ -25,4 +25,9 @@ export class LoansController {
   returnLoan(@Param('id') id: string) {
     return this.loansService.returnLoan(+id);
   }
+
+  @Post('fines/:id/pay')
+  payFine(@Param('id') id: string) {
+    return this.loansService.payFine(+id);
+  }
 }
