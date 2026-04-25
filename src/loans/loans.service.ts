@@ -102,4 +102,72 @@ export class LoansService {
       .andWhere('fine.estado = :estado', { estado: FineStatus.PENDIENTE })
       .getMany();
   }
+
+  async returnLoan(id: number): Promise<Loan> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const prestamo = await queryRunner.manager.findOne(Loan, {
+        where: { id },
+        relations: ['libro'],
+      });
+
+      if (!prestamo) {
+        throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
+      }
+
+      if (prestamo.estado === LoanStatus.DEVUELTO) {
+        throw new BadRequestException('El préstamo ya ha sido devuelto');
+      }
+
+      // Registrar fecha de devolución real
+      prestamo.fechaDevolucionReal = new Date();
+      prestamo.estado = LoanStatus.DEVUELTO;
+
+      // Calcular días de retraso
+      const fechaLimite = new Date(prestamo.fechaLimiteDevolucion);
+      const fechaReal = prestamo.fechaDevolucionReal;
+      
+      // Asegurarse de comparar solo las fechas (sin horas)
+      fechaLimite.setHours(0, 0, 0, 0);
+      const fechaRealCopia = new Date(fechaReal);
+      fechaRealCopia.setHours(0, 0, 0, 0);
+
+      const diferenciaTiempo = fechaRealCopia.getTime() - fechaLimite.getTime();
+      const diasRetraso = Math.ceil(diferenciaTiempo / (1000 * 3600 * 24));
+
+      // Generar multa si hay retraso
+      if (diasRetraso > 0) {
+        const montoMulta = diasRetraso * 1000; // $1,000 por día de retraso
+
+        const nuevaMulta = queryRunner.manager.create(Fine, {
+          prestamoId: prestamo.id,
+          monto: montoMulta,
+          diasRetraso: diasRetraso,
+          estado: FineStatus.PENDIENTE,
+        });
+
+        await queryRunner.manager.save(nuevaMulta);
+      }
+
+      // Actualizar stock del libro
+      if (prestamo.libro) {
+        prestamo.libro.cantidadDisponible += 1;
+        await queryRunner.manager.save(prestamo.libro);
+      }
+
+      // Guardar el préstamo actualizado
+      const prestamoActualizado = await queryRunner.manager.save(prestamo);
+
+      await queryRunner.commitTransaction();
+      return prestamoActualizado;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }
