@@ -7,6 +7,8 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Student } from '../../users/entities/student.entity';
+import { Teacher } from '../../users/entities/teacher.entity';
 
 @Entity('calificaciones')
 export class Grade {
@@ -44,11 +46,11 @@ export class Grade {
   actualizadoPor: number | null;
 
   // Relaciones
-  @ManyToOne(() => User)
+  @ManyToOne(() => Student)
   @JoinColumn({ name: 'estudiante_id' })
-  estudiante: User;
+  estudiante: Student;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => Teacher)
   @JoinColumn({ name: 'docente_id' })
-  docente: User;
+  docente: Teacher;
 }

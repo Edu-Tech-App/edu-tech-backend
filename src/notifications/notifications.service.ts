@@ -31,6 +31,7 @@ export class NotificationsService {
     // Buscar préstamos activos cuya fecha límite sea mañana (por vencer) o que ya estén vencidos
     const expiringLoans = await this.loanRepository.createQueryBuilder('loan')
       .innerJoinAndSelect('loan.estudiante', 'estudiante')
+      .innerJoinAndSelect('estudiante.user', 'user')
       .innerJoinAndSelect('loan.libro', 'libro')
       .where('loan.estado = :estado', { estado: LoanStatus.ACTIVO })
       .andWhere('loan.fechaLimiteDevolucion <= :tomorrow', { tomorrow })
@@ -42,16 +43,16 @@ export class NotificationsService {
     }
 
     for (const loan of expiringLoans) {
-      if (loan.estudiante && loan.estudiante.correoInstitucional) {
+      if (loan.estudiante && loan.estudiante.user && loan.estudiante.user.correoInstitucional) {
         try {
           await this.mailerService.sendMail({
-            to: loan.estudiante.correoInstitucional,
+            to: loan.estudiante.user.correoInstitucional,
             subject: 'Recordatorio de devolución de libro',
-            text: `Hola ${loan.estudiante.nombreCompleto}, te recordamos que el libro "${loan.libro.titulo}" vence el ${loan.fechaLimiteDevolucion}. Por favor devuélvelo a tiempo para evitar multas.`,
+            text: `Hola ${loan.estudiante.user.nombreCompleto}, te recordamos que el libro "${loan.libro.titulo}" vence el ${loan.fechaLimiteDevolucion}. Por favor devuélvelo a tiempo para evitar multas.`,
           });
-          this.logger.log(`Correo enviado a ${loan.estudiante.correoInstitucional} por préstamo vencido/por vencer.`);
+          this.logger.log(`Correo enviado a ${loan.estudiante.user.correoInstitucional} por préstamo vencido/por vencer.`);
         } catch (error) {
-          this.logger.error(`Error al enviar correo a ${loan.estudiante.correoInstitucional}:`, error);
+          this.logger.error(`Error al enviar correo a ${loan.estudiante.user.correoInstitucional}:`, error);
         }
       }
     }

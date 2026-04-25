@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Book } from '../../books/entities/book.entity';
 import { User } from '../../users/entities/user.entity';
+import { Student } from '../../users/entities/student.entity';
 import { Fine } from './fine.entity';
 
 export enum LoanStatus {
@@ -53,9 +54,9 @@ export class Loan {
   @JoinColumn({ name: 'libro_id' })
   libro: Book;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => Student)
   @JoinColumn({ name: 'estudiante_id' })
-  estudiante: User;
+  estudiante: Student;
 
   @OneToOne(() => Fine, (fine) => fine.prestamo)
   multa: Fine;
