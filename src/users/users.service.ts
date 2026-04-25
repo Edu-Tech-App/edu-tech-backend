@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole, UserStatus } from './entities/user.entity';
+import { Student } from './entities/student.entity';
+import { Teacher } from './entities/teacher.entity';
 import { RegisterUserDto } from './dto/register-user.dto';
 
 export class UpdateUserDto {
@@ -22,6 +24,10 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
+    @InjectRepository(Teacher)
+    private teacherRepository: Repository<Teacher>,
   ) {}
 
   async register(registerDto: RegisterUserDto) {
@@ -59,6 +65,29 @@ export class UsersService {
     });
 
     await this.usersRepository.save(user);
+
+    console.log(`Usuario guardado con ID: ${user.id}, Rol: ${user.rol}`);
+
+    // Crear registro automático en tabla de rol si corresponde
+    if (String(user.rol) === 'ESTUDIANTE') {
+      const student = this.studentRepository.create({
+        usuarioId: user.id,
+        codigoEstudiantil: `EST-${user.id}`,
+        carrera: 'Por definir',
+        semestreActual: 1,
+      });
+      await this.studentRepository.save(student);
+      console.log(`Registro de Estudiante creado para ID: ${user.id}`);
+    } else if (String(user.rol) === 'DOCENTE') {
+      const teacher = this.teacherRepository.create({
+        usuarioId: user.id,
+        especialidad: 'General',
+        departamento: 'General',
+        cubiculo: 'N/A',
+      });
+      await this.teacherRepository.save(teacher);
+      console.log(`Registro de Docente creado para ID: ${user.id}`);
+    }
 
     return {
       id: user.id,

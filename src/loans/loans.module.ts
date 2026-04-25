@@ -7,9 +7,10 @@ import { Fine } from './entities/fine.entity';
 import { Payment } from './entities/payment.entity';
 import { Book } from '../books/entities/book.entity';
 import { User } from '../users/entities/user.entity';
+import { Student } from '../users/entities/student.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Loan, Fine, Payment, Book, User])],
+  imports: [TypeOrmModule.forFeature([Loan, Fine, Payment, Book, User, Student])],
   controllers: [LoansController],
   providers: [LoansService],
 })

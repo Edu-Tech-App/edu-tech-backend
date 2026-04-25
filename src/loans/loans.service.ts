@@ -10,6 +10,7 @@ import { Fine, FineStatus } from './entities/fine.entity';
 import { Book, BookStatus } from '../books/entities/book.entity';
 import { Payment, PaymentStatus } from './entities/payment.entity';
 import { User } from '../users/entities/user.entity';
+import { Student } from '../users/entities/student.entity';
 import { CreateLoanDto } from './dto/create-loan.dto';
 
 @Injectable()
@@ -25,6 +26,8 @@ export class LoansService {
     private fineRepository: Repository<Fine>,
     @InjectRepository(Payment)
     private paymentRepository: Repository<Payment>,
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
     private dataSource: DataSource,
   ) {}
 
@@ -41,10 +44,10 @@ export class LoansService {
       throw new BadRequestException('El libro no está disponible para préstamo');
     }
 
-    // 2. Validar que el usuario existe
-    const usuario = await this.userRepository.findOneBy({ id: estudianteId });
-    if (!usuario) {
-      throw new NotFoundException(`Usuario con ID ${estudianteId} no encontrado`);
+    // 2. Validar que el estudiante existe en la tabla de estudiantes
+    const estudiante = await this.studentRepository.findOneBy({ usuarioId: estudianteId });
+    if (!estudiante) {
+      throw new NotFoundException(`El estudiante con ID ${estudianteId} no está registrado en la tabla de estudiantes o no tiene el rol correspondiente`);
     }
 
     // 3. Validar que el usuario no tenga multas pendientes
