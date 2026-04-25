@@ -12,6 +12,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StudyRoomsModule } from './study-rooms/study-rooms.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SubjectsModule } from './subjects/subjects.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     LoansModule,
     StudyRoomsModule,
     NotificationsModule,
+    SubjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -9,6 +9,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { Student } from '../../users/entities/student.entity';
 import { Teacher } from '../../users/entities/teacher.entity';
+import { Subject } from '../../subjects/entities/subject.entity';
 
 @Entity('calificaciones')
 export class Grade {
@@ -53,4 +54,8 @@ export class Grade {
   @ManyToOne(() => Teacher)
   @JoinColumn({ name: 'docente_id' })
   docente: Teacher;
+
+  @ManyToOne(() => Subject)
+  @JoinColumn({ name: 'asignatura_id' })
+  asignatura: Subject;
 }
