@@ -1,6 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { StudyRoom } from './study-room.entity';
 import { User } from '../../users/entities/user.entity';
+import { Student } from '../../users/entities/student.entity';
+import { Teacher } from '../../users/entities/teacher.entity';
 
 export enum ReservationStatus {
   ACTIVA = 'ACTIVA',
@@ -42,11 +44,11 @@ export class Reservation {
   @JoinColumn({ name: 'sala_id' })
   sala: StudyRoom;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => Student)
   @JoinColumn({ name: 'estudiante_id' })
-  estudiante: User;
+  estudiante: Student;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => Teacher)
   @JoinColumn({ name: 'docente_id' })
-  docente: User;
+  docente: Teacher;
 }
