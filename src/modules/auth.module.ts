@@ -19,9 +19,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: process.env.JWT_SECRET || 'edu-tech-secret-key-2026',
+        secret: configService.get<string>('jwt.secret'),
         signOptions: {
-          expiresIn: '30m',
+          expiresIn: configService.get<string>('jwt.expiresIn') as any,
         },
       }),
     }),

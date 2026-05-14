@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import configuration from './config/configuration';
 import { BooksModule } from './modules/books.module';
 import { UsersModule } from './modules/users.module';
 import { GradesModule } from './modules/grades.module';
@@ -16,31 +17,42 @@ import { SubjectsModule } from './modules/subjects.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      load: [configuration],
+      isGlobal: true,
+    }),
     ScheduleModule.forRoot(),
-    MailerModule.forRoot({
-      transport: {
-        host: process.env.MAIL_HOST || 'smtp.ethereal.email',
-        port: Number(process.env.MAIL_PORT) || 587,
-        auth: {
-          user: process.env.MAIL_USER,
-          pass: process.env.MAIL_PASS,
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        transport: {
+          host: configService.get<string>('mail.host'),
+          port: configService.get<number>('mail.port'),
+          auth: {
+            user: configService.get<string>('mail.user'),
+            pass: configService.get<string>('mail.pass'),
+          },
         },
-      },
-      defaults: {
-        from: '"Edu-Tech Notifications" <noreply@edu-tech.com>',
-      },
+        defaults: {
+          from: '"Edu-Tech Notifications" <noreply@edu-tech.com>',
+        },
+      }),
     }),
 
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DB_HOST,
-      port: 3306,
-      username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      autoLoadEntities: true,
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get<string>('database.host'),
+        port: configService.get<number>('database.port'),
+        username: configService.get<string>('database.username'),
+        password: configService.get<string>('database.password'),
+        database: configService.get<string>('database.name'),
+        autoLoadEntities: true,
+        synchronize: true,
+      }),
     }),
 
     BooksModule,
