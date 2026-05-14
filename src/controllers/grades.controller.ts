@@ -7,6 +7,10 @@ import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
+@ApiTags('grades')
+@ApiBearerAuth()
 @Controller('grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class GradesController {

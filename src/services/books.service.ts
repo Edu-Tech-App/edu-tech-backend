@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, DataSource } from 'typeorm';
-import { Book } from '../entities/book.entity';
+import { Book, BookStatus } from '../entities/book.entity';
 import { CreateBookDto } from '../dto/books/create-book.dto';
 import { UpdateBookDto } from '../dto/books/update-book.dto';
 
@@ -70,10 +70,11 @@ export class BooksService {
 
     if (activeLoansCount > 0) {
       throw new BadRequestException(
-        'No se puede eliminar el libro porque tiene préstamos activos o vencidos pendientes',
+        'No se puede dar de baja el libro porque tiene préstamos activos o vencidos pendientes',
       );
     }
 
-    await this.bookRepository.remove(book);
+    book.estado = BookStatus.BAJA;
+    await this.bookRepository.save(book);
   }
 }

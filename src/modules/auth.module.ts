@@ -30,4 +30,4 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard, RateLimitGuard],
   exports: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard, RateLimitGuard],
 })
-export class AuthModule {}
+export class AuthModule { }
