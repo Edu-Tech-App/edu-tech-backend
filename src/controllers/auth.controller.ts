@@ -10,7 +10,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly rateLimitGuard: RateLimitGuard,
-  ) {}
+  ) { }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

@@ -8,9 +8,10 @@ import { Payment } from '../entities/payment.entity';
 import { Book } from '../entities/book.entity';
 import { User } from '../entities/user.entity';
 import { Student } from '../entities/student.entity';
+import { NotificationsModule } from './notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Loan, Fine, Payment, Book, User, Student])],
+  imports: [TypeOrmModule.forFeature([Loan, Fine, Payment, Book, User, Student]), NotificationsModule],
   controllers: [LoansController],
   providers: [LoansService],
 })

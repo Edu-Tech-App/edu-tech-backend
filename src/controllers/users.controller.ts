@@ -7,9 +7,13 @@ import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
+@ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

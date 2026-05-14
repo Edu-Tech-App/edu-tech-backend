@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Grade } from '../entities/grade.entity';
 import { CreateGradeDto, UpdateGradeDto } from '../dto/grades/grade.dto';
 import { User, UserRole } from '../entities/user.entity';
+import { Subject } from '../entities/subject.entity';
+import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class GradesService {
@@ -12,6 +14,9 @@ export class GradesService {
     private gradesRepository: Repository<Grade>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Subject)
+    private subjectsRepository: Repository<Subject>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(createGradeDto: CreateGradeDto, docenteId: number) {
@@ -37,9 +42,22 @@ export class GradesService {
       docenteId,
     });
 
-    await this.gradesRepository.save(grade);
+    const savedGrade = await this.gradesRepository.save(grade);
 
-    return grade;
+    // Notificar al estudiante
+    const user = await this.usersRepository.findOne({ where: { id: estudianteId } });
+    const asignatura = await this.subjectsRepository.findOne({ where: { id: asignaturaId } });
+    
+    if (user && user.correoInstitucional) {
+      this.notificationsService.sendGradeNotification(
+        user.correoInstitucional,
+        user.nombreCompleto,
+        asignatura ? asignatura.nombre : 'Asignatura ID: ' + asignaturaId,
+        valor
+      );
+    }
+
+    return savedGrade;
   }
 
   async update(id: number, updateGradeDto: UpdateGradeDto, docenteId: number) {
@@ -61,9 +79,23 @@ export class GradesService {
     grade.valor = valor;
     grade.actualizadoPor = docenteId;
 
-    await this.gradesRepository.save(grade);
+    const savedGrade = await this.gradesRepository.save(grade);
 
-    return grade;
+    // Notificar al estudiante
+    const user = await this.usersRepository.findOne({ where: { id: grade.estudianteId } });
+    const asignatura = await this.subjectsRepository.findOne({ where: { id: grade.asignaturaId } });
+    
+    if (user && user.correoInstitucional) {
+      this.notificationsService.sendGradeNotification(
+        user.correoInstitucional,
+        user.nombreCompleto,
+        asignatura ? asignatura.nombre : 'Asignatura ID: ' + grade.asignaturaId,
+        valor,
+        true
+      );
+    }
+
+    return savedGrade;
   }
 
   async findAll(filters: { periodoAcademico?: string; asignaturaId?: number }) {

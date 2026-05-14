@@ -7,6 +7,7 @@ import { Student } from '../entities/student.entity';
 import { Teacher } from '../entities/teacher.entity';
 import { RegisterUserDto } from '../dto/users/register-user.dto';
 import { UpdateUserDto, UpdateUserStatusDto } from '../dto/users/update-user.dto';
+import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +18,7 @@ export class UsersService {
     private studentRepository: Repository<Student>,
     @InjectRepository(Teacher)
     private teacherRepository: Repository<Teacher>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async register(registerDto: RegisterUserDto) {
@@ -68,6 +70,9 @@ export class UsersService {
       });
       await this.teacherRepository.save(teacher);
     }
+
+    // Enviar correo de bienvenida
+    await this.notificationsService.sendWelcomeEmail(user.correoInstitucional, user.nombreCompleto);
 
     return {
       id: user.id,

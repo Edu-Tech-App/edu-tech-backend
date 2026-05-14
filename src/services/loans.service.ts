@@ -12,6 +12,7 @@ import { Payment, PaymentStatus } from '../entities/payment.entity';
 import { User } from '../entities/user.entity';
 import { Student } from '../entities/student.entity';
 import { CreateLoanDto } from '../dto/loans/create-loan.dto';
+import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class LoansService {
@@ -28,6 +29,7 @@ export class LoansService {
     private paymentRepository: Repository<Payment>,
     @InjectRepository(Student)
     private studentRepository: Repository<Student>,
+    private readonly notificationsService: NotificationsService,
     private dataSource: DataSource,
   ) {}
 
@@ -78,6 +80,18 @@ export class LoansService {
       await queryRunner.manager.save(libro);
 
       await queryRunner.commitTransaction();
+
+      // Notificar al estudiante
+      const user = await this.userRepository.findOne({ where: { id: estudianteId } });
+      if (user && user.correoInstitucional) {
+        this.notificationsService.sendLoanConfirmation(
+          user.correoInstitucional,
+          user.nombreCompleto,
+          libro.titulo,
+          nuevoPrestamo.fechaLimiteDevolucion
+        );
+      }
+
       return prestamoGuardado;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -155,6 +169,24 @@ export class LoansService {
       const prestamoActualizado = await queryRunner.manager.save(prestamo);
 
       await queryRunner.commitTransaction();
+
+      // Notificar al estudiante si hay multa
+      const user = await this.userRepository.findOne({ 
+        where: { id: prestamo.estudianteId } 
+      });
+      
+      if (user && user.correoInstitucional) {
+        if (diasRetraso > 0) {
+          this.notificationsService.sendFineNotification(
+            user.correoInstitucional,
+            user.nombreCompleto,
+            prestamo.libro.titulo,
+            diasRetraso * 1000,
+            diasRetraso
+          );
+        }
+      }
+
       return prestamoActualizado;
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -197,6 +229,21 @@ export class LoansService {
       if (isApproved) {
         multa.estado = FineStatus.PAGADA;
         await queryRunner.manager.save(multa);
+
+        // Notificar al estudiante
+        const loan = await queryRunner.manager.findOne(Loan, {
+          where: { id: multa.prestamoId },
+          relations: ['estudiante', 'estudiante.user', 'libro'],
+        });
+
+        if (loan?.estudiante?.user?.correoInstitucional) {
+          this.notificationsService.sendPaymentConfirmation(
+            loan.estudiante.user.correoInstitucional,
+            loan.estudiante.user.nombreCompleto,
+            multa.monto,
+            `Multa por el libro: ${loan.libro.titulo}`,
+          ).catch(e => console.error('Error enviando notificación de pago:', e));
+        }
       }
 
       await queryRunner.commitTransaction();

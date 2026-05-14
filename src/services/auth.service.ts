@@ -12,7 +12,7 @@ export class AuthService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async login(loginDto: LoginDto) {
     const { correo, password } = loginDto;

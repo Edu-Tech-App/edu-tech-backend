@@ -27,15 +27,16 @@ import { SubjectsModule } from './modules/subjects.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         transport: {
-          host: configService.get<string>('mail.host'),
-          port: configService.get<number>('mail.port'),
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
           auth: {
             user: configService.get<string>('mail.user'),
             pass: configService.get<string>('mail.pass'),
           },
         },
         defaults: {
-          from: '"Edu-Tech Notifications" <noreply@edu-tech.com>',
+          from: `"Edu-Tech" <${configService.get<string>('mail.user')}>`,
         },
       }),
     }),
@@ -67,4 +68,4 @@ import { SubjectsModule } from './modules/subjects.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
