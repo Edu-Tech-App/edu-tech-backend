@@ -3,16 +3,16 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { BooksModule } from './books/books.module';
-import { UsersModule } from './users/users.module';
-import { GradesModule } from './grades/grades.module';
-import { AuthModule } from './auth/auth.module';
-import { LoansModule } from './loans/loans.module';
+import { BooksModule } from './modules/books.module';
+import { UsersModule } from './modules/users.module';
+import { GradesModule } from './modules/grades.module';
+import { AuthModule } from './modules/auth.module';
+import { LoansModule } from './modules/loans.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { StudyRoomsModule } from './study-rooms/study-rooms.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { SubjectsModule } from './subjects/subjects.module';
+import { StudyRoomsModule } from './modules/study-rooms.module';
+import { NotificationsModule } from './modules/notifications.module';
+import { SubjectsModule } from './modules/subjects.module';
 
 @Module({
   imports: [
