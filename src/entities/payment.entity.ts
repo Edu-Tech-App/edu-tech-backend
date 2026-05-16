@@ -9,28 +9,28 @@ export enum PaymentStatus {
 @Entity('pagos_multas')
 export class Payment {
   @PrimaryColumn({ name: 'multa_id', type: 'int' })
-  multaId: number;
+  multaId!: number;
 
   @Column({ name: 'referencia_pasarela', type: 'varchar', length: 100 })
-  referenciaPasarela: string;
+  referenciaPasarela!: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  monto: number;
+  monto!: number;
 
   @Column({
     type: 'enum',
     enum: PaymentStatus,
   })
-  estado: PaymentStatus;
+  estado!: PaymentStatus;
 
   @Column({
     name: 'fecha_pago',
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
   })
-  fechaPago: Date;
+  fechaPago!: Date;
 
   @OneToOne(() => Fine)
   @JoinColumn({ name: 'multa_id' })
-  multa: Fine;
+  multa!: Fine;
 }

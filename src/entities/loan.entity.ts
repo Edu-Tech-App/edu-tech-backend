@@ -20,43 +20,43 @@ export enum LoanStatus {
 @Entity('prestamos')
 export class Loan {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ name: 'libro_id' })
-  libroId: number;
+  libroId!: number;
 
   @Column({ name: 'estudiante_id' })
-  estudianteId: number;
+  estudianteId!: number;
 
   @Column({
     name: 'fecha_prestamo',
     type: 'date',
     default: () => '(CURRENT_DATE)',
   })
-  fechaPrestamo: Date;
+  fechaPrestamo!: Date;
 
   @Column({ name: 'fecha_limite_devolucion', type: 'date' })
-  fechaLimiteDevolucion: Date;
+  fechaLimiteDevolucion!: Date;
 
   @Column({ name: 'fecha_devolucion_real', type: 'date', nullable: true })
-  fechaDevolucionReal: Date;
+  fechaDevolucionReal!: Date;
 
   @Column({
     type: 'enum',
     enum: LoanStatus,
     default: LoanStatus.ACTIVO,
   })
-  estado: LoanStatus;
+  estado!: LoanStatus;
 
   // Relaciones
   @ManyToOne(() => Book)
   @JoinColumn({ name: 'libro_id' })
-  libro: Book;
+  libro!: Book;
 
   @ManyToOne(() => Student)
   @JoinColumn({ name: 'estudiante_id' })
-  estudiante: Student;
+  estudiante!: Student;
 
   @OneToOne(() => Fine, (fine) => fine.prestamo)
-  multa: Fine;
+  multa!: Fine;
 }

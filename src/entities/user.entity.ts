@@ -1,44 +1,58 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum UserRole {
-  ESTUDIANTE = 'ESTUDIANTE',
-  DOCENTE = 'DOCENTE',
-  BIBLIOTECARIO = 'BIBLIOTECARIO',
-  ADMINISTRATIVO = 'ADMINISTRATIVO',
+  ESTUDIANTE = 'estudiante',
+  DOCENTE = 'docente',
+  BIBLIOTECARIO = 'bibliotecario',
+  ADMINISTRATIVO = 'administrativo',
 }
 
 export enum UserStatus {
-  ACTIVO = 'ACTIVO',
-  BLOQUEADO = 'BLOQUEADO',
-  INACTIVO = 'INACTIVO',
+  ACTIVO = 'activo',
+  BLOQUEADO = 'bloqueado',
+  INACTIVO = 'inactivo',
 }
 
 @Entity('usuarios')
 export class User {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ name: 'nombre_completo', length: 100 })
-  nombreCompleto: string;
+  nombreCompleto!: string;
 
   @Column({ name: 'documento_identidad', length: 20, unique: true })
-  documentoIdentidad: string;
+  documentoIdentidad!: string;
 
   @Column({ name: 'correo_institucional', length: 100, unique: true })
-  correoInstitucional: string;
+  correoInstitucional!: string;
 
   @Column({ name: 'password_hash', length: 255 })
-  passwordHash: string;
+  passwordHash!: string;
 
-  @Column({ type: 'enum', enum: UserRole })
-  rol: UserRole;
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.ESTUDIANTE,
+  })
+  rol!: UserRole;
 
-  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVO })
-  estado: UserStatus;
+  @Column({
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.ACTIVO,
+  })
+  estado!: UserStatus;
 
   @CreateDateColumn({ name: 'creado_en' })
-  creadoEn: Date;
+  creadoEn!: Date;
 
   @UpdateDateColumn({ name: 'actualizado_en' })
-  actualizadoEn: Date;
+  actualizadoEn!: Date;
 }

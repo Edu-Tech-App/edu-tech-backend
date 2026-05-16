@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { StudyRoom } from './study-room.entity';
 import { Student } from './student.entity';
 import { Teacher } from './teacher.entity';
@@ -12,42 +18,42 @@ export enum ReservationStatus {
 @Entity('reservas_salas')
 export class Reservation {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ name: 'sala_id', type: 'int' })
-  salaId: number;
+  salaId!: number;
 
   @Column({ name: 'estudiante_id', type: 'int', nullable: true })
-  estudianteId: number | null;
+  estudianteId!: number | null;
 
   @Column({ name: 'docente_id', type: 'int', nullable: true })
-  docenteId: number | null;
+  docenteId!: number | null;
 
   @Column({ name: 'fecha_reserva', type: 'date' })
-  fechaReserva: Date;
+  fechaReserva!: Date;
 
   @Column({ name: 'hora_inicio', type: 'time' })
-  horaInicio: string;
+  horaInicio!: string;
 
   @Column({ name: 'hora_fin', type: 'time' })
-  horaFin: string;
+  horaFin!: string;
 
   @Column({
     type: 'enum',
     enum: ReservationStatus,
     default: ReservationStatus.ACTIVA,
   })
-  estado: ReservationStatus;
+  estado!: ReservationStatus;
 
   @ManyToOne(() => StudyRoom)
   @JoinColumn({ name: 'sala_id' })
-  sala: StudyRoom;
+  sala!: StudyRoom;
 
   @ManyToOne(() => Student)
   @JoinColumn({ name: 'estudiante_id' })
-  estudiante: Student;
+  estudiante!: Student;
 
   @ManyToOne(() => Teacher)
   @JoinColumn({ name: 'docente_id' })
-  docente: Teacher;
+  docente!: Teacher;
 }

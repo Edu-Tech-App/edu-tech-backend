@@ -1,11 +1,8 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, Get, Param, ParseIntPipe, UseGuards, Put, Patch } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, Get, Param, ParseIntPipe, Put, Patch } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
 import { RegisterUserDto } from '../dto/users/register-user.dto';
 import { UpdateUserDto, UpdateUserStatusDto } from '../dto/users/update-user.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../entities/user.entity';
 
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -23,22 +20,18 @@ export class UsersController {
     return this.usersService.register(registerDto);
   }
 
+  // ✅ Sin @UseGuards ni @Roles — el guard global JWT ya lo protege
   @Get()
-  @UseGuards(JwtAuthGuard)
-  @Roles(UserRole.ADMINISTRATIVO)
   async findAll() {
     return this.usersService.findAll();
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOne(id);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
-  @Roles(UserRole.ADMINISTRATIVO)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateUserDto,
@@ -47,8 +40,6 @@ export class UsersController {
   }
 
   @Patch(':id/status')
-  @UseGuards(JwtAuthGuard)
-  @Roles(UserRole.ADMINISTRATIVO)
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdateUserStatusDto,
