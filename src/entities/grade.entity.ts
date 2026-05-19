@@ -13,25 +13,25 @@ import { Subject } from './subject.entity';
 @Entity('calificaciones')
 export class Grade {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ name: 'estudiante_id' })
-  estudianteId: number;
+  estudianteId!: number;
 
   @Column({ name: 'asignatura_id' })
-  asignaturaId: number;
+  asignaturaId!: number;
 
   @Column({ name: 'periodo_academico', length: 10 })
-  periodoAcademico: string;
+  periodoAcademico!: string;
 
   @Column({ type: 'decimal', precision: 4, scale: 2 })
-  valor: number;
+  valor!: number;
 
   @CreateDateColumn({ name: 'fecha_registro' })
-  fechaRegistro: Date;
+  fechaRegistro!: Date;
 
   @Column({ name: 'docente_id' })
-  docenteId: number;
+  docenteId!: number;
 
   @Column({
     name: 'valor_anterior',
@@ -40,21 +40,21 @@ export class Grade {
     scale: 2,
     nullable: true,
   })
-  valorAnterior: number | null;
+  valorAnterior!: number | null;
 
   @Column({ name: 'actualizado_por', type: 'int', nullable: true })
-  actualizadoPor: number | null;
+  actualizadoPor!: number | null;
 
   // Relaciones
   @ManyToOne(() => Student)
   @JoinColumn({ name: 'estudiante_id' })
-  estudiante: Student;
+  estudiante!: Student;
 
   @ManyToOne(() => Teacher)
   @JoinColumn({ name: 'docente_id' })
-  docente: Teacher;
+  docente!: Teacher;
 
   @ManyToOne(() => Subject)
   @JoinColumn({ name: 'asignatura_id' })
-  asignatura: Subject;
+  asignatura!: Subject;
 }

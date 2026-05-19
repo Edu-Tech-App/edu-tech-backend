@@ -4,18 +4,18 @@ import { User } from './user.entity';
 @Entity('docentes')
 export class Teacher {
   @PrimaryColumn({ name: 'usuario_id' })
-  usuarioId: number;
+  usuarioId!: number;
 
   @Column({ length: 100 })
-  especialidad: string;
+  especialidad!: string;
 
   @Column({ length: 100 })
-  departamento: string;
+  departamento!: string;
 
   @Column({ length: 20 })
-  cubiculo: string;
+  cubiculo!: string;
 
   @OneToOne(() => User)
   @JoinColumn({ name: 'usuario_id' })
-  user: User;
+  user!: User;
 }

@@ -9,6 +9,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext) {
+    // Revisa si la ruta tiene el decorador @Public()
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
       context.getClass(),
@@ -18,13 +19,17 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
+    // Si no es pública, ejecuta la validación de la estrategia JWT
     return super.canActivate(context);
   }
 
   handleRequest(err: any, user: any, info: any) {
+    // Si hay un error de Passport o el usuario no fue encontrado/validado en la estrategia
     if (err || !user) {
-      throw err || new UnauthorizedException('Token inválido o expirado');
+      throw err || new UnauthorizedException('No tienes permiso para acceder a este recurso');
     }
+    
+    // Retorna el usuario para que esté disponible en req.user
     return user;
   }
 }

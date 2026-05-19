@@ -4,7 +4,6 @@ import {
   Column,
   OneToOne,
   JoinColumn,
-  CreateDateColumn,
 } from 'typeorm';
 import { Loan } from './loan.entity';
 
@@ -17,33 +16,33 @@ export enum FineStatus {
 @Entity('multas')
 export class Fine {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ name: 'prestamo_id' })
-  prestamoId: number;
+  prestamoId!: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  monto: number;
+  monto!: number;
 
   @Column({ name: 'dias_retraso', default: 0 })
-  diasRetraso: number;
+  diasRetraso!: number;
 
   @Column({
     type: 'enum',
     enum: FineStatus,
     default: FineStatus.PENDIENTE,
   })
-  estado: FineStatus;
+  estado!: FineStatus;
 
   @Column({
     name: 'fecha_generacion',
     type: 'date',
     default: () => '(CURRENT_DATE)',
   })
-  fechaGeneracion: Date;
+  fechaGeneracion!: Date;
 
   // Relaciones
   @OneToOne(() => Loan, (loan) => loan.multa)
   @JoinColumn({ name: 'prestamo_id' })
-  prestamo: Loan;
+  prestamo!: Loan;
 }

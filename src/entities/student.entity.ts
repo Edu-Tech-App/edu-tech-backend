@@ -4,18 +4,18 @@ import { User } from './user.entity';
 @Entity('estudiantes')
 export class Student {
   @PrimaryColumn({ name: 'usuario_id' })
-  usuarioId: number;
+  usuarioId!: number;
 
   @Column({ name: 'codigo_estudiantil', length: 20 })
-  codigoEstudiantil: string;
+  codigoEstudiantil!: string;
 
   @Column({ length: 100 })
-  carrera: string;
+  carrera!: string;
 
   @Column({ name: 'semestre_actual' })
-  semestreActual: number;
+  semestreActual!: number;
 
   @OneToOne(() => User)
   @JoinColumn({ name: 'usuario_id' })
-  user: User;
+  user!: User;
 }

@@ -9,21 +9,21 @@ export enum StudyRoomStatus {
 @Entity('salas_estudio')
 export class StudyRoom {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar', length: 100 })
-  nombre: string;
+  nombre!: string;
 
   @Column({ type: 'int' })
-  capacidad: number;
+  capacidad!: number;
 
   @Column({ type: 'varchar', length: 100 })
-  ubicacion: string;
+  ubicacion!: string;
 
   @Column({
     type: 'enum',
     enum: StudyRoomStatus,
     default: StudyRoomStatus.ACTIVA,
   })
-  estado: StudyRoomStatus;
+  estado!: StudyRoomStatus;
 }

@@ -14,30 +14,30 @@ export enum BookStatus {
 @Entity('libros')
 export class Book {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ length: 200 })
-  titulo: string;
+  titulo!: string;
 
   @Column({ length: 200 })
-  autor: string;
+  autor!: string;
 
   @Column({ length: 50, nullable: true })
-  categoria: string;
+  categoria!: string;
 
   @Column({ length: 100, nullable: true })
-  editorial: string;
+  editorial!: string;
 
   @Column({ name: 'cantidad_disponible', default: 0 })
-  cantidadDisponible: number;
+  cantidadDisponible!: number;
 
   @Column({
     type: 'enum',
     enum: BookStatus,
     default: BookStatus.DISPONIBLE,
   })
-  estado: BookStatus;
+  estado!: BookStatus;
 
   @CreateDateColumn({ name: 'creado_en' })
-  creadoEn: Date;
+  creadoEn!: Date;
 }
