@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, ParseIntPipe, UseGuards, Put, Delete } from '@nestjs/common';
 import { SubjectsService } from '../services/subjects.service';
 import { CreateSubjectDto } from '../dto/subjects/create-subject.dto';
+import { UpdateSubjectDto } from '../dto/subjects/update-subject.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -29,5 +30,20 @@ export class SubjectsController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.subjectsService.findOne(id);
+  }
+
+  @Put(':id')
+  @Roles(UserRole.ADMINISTRATIVO)
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSubjectDto: UpdateSubjectDto,
+  ) {
+    return this.subjectsService.update(id, updateSubjectDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMINISTRATIVO)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.subjectsService.remove(id);
   }
 }

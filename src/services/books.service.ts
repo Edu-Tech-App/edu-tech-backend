@@ -56,6 +56,12 @@ export class BooksService {
     return await this.bookRepository.save(book);
   }
 
+  async updateCover(id: number, portadaUrl: string): Promise<Book> {
+    const book = await this.findOne(id);
+    book.portadaUrl = portadaUrl;
+    return await this.bookRepository.save(book);
+  }
+
   async remove(id: number): Promise<void> {
     const book = await this.findOne(id);
 

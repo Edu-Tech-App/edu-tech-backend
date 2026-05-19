@@ -12,6 +12,7 @@ import { Payment, PaymentStatus } from '../entities/payment.entity';
 import { User } from '../entities/user.entity';
 import { Student } from '../entities/student.entity';
 import { CreateLoanDto } from '../dto/loans/create-loan.dto';
+import { UpdateLoanDto } from '../dto/loans/update-loan.dto';
 import { NotificationsService } from './notifications.service';
 
 @Injectable()
@@ -33,6 +34,31 @@ export class LoansService {
     private dataSource: DataSource,
   ) {}
 
+  private async ensureStudentProfile(estudianteId: number): Promise<Student> {
+    let estudiante = await this.studentRepository.findOneBy({ usuarioId: estudianteId });
+
+    if (estudiante) {
+      return estudiante;
+    }
+
+    const user = await this.userRepository.findOneBy({ id: estudianteId });
+
+    if (!user || user.rol !== 'estudiante') {
+      throw new NotFoundException(
+        `El estudiante con ID ${estudianteId} no está registrado o no tiene el rol correspondiente`,
+      );
+    }
+
+    estudiante = this.studentRepository.create({
+      usuarioId: user.id,
+      codigoEstudiantil: `EST-${user.id}`,
+      carrera: 'Por definir',
+      semestreActual: 1,
+    });
+
+    return this.studentRepository.save(estudiante);
+  }
+
   async create(createLoanDto: CreateLoanDto): Promise<Loan> {
     const { libroId, estudianteId, fechaLimiteDevolucion } = createLoanDto;
 
@@ -45,10 +71,7 @@ export class LoansService {
       throw new BadRequestException('El libro no está disponible para préstamo');
     }
 
-    const estudiante = await this.studentRepository.findOneBy({ usuarioId: estudianteId });
-    if (!estudiante) {
-      throw new NotFoundException(`El estudiante con ID ${estudianteId} no está registrado o no tiene el rol correspondiente`);
-    }
+    await this.ensureStudentProfile(estudianteId);
 
     const multasPendientes = await this.fineRepository.createQueryBuilder('fine')
       .innerJoin('fine.prestamo', 'loan')
@@ -103,7 +126,17 @@ export class LoansService {
 
   async findAll(): Promise<Loan[]> {
     return this.loanRepository.find({
-      relations: ['libro', 'estudiante', 'multa'],
+      relations: ['libro', 'estudiante', 'estudiante.user', 'multa'],
+    });
+  }
+
+  async findByStudent(estudianteId: number): Promise<Loan[]> {
+    return this.loanRepository.find({
+      where: { estudianteId },
+      relations: ['libro', 'estudiante', 'estudiante.user', 'multa'],
+      order: {
+        fechaPrestamo: 'DESC',
+      },
     });
   }
 
@@ -194,6 +227,48 @@ export class LoansService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async update(id: number, updateLoanDto: UpdateLoanDto): Promise<Loan> {
+    const loan = await this.loanRepository.findOne({
+      where: { id },
+      relations: ['libro'],
+    });
+
+    if (!loan) {
+      throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
+    }
+
+    if (updateLoanDto.libroId && updateLoanDto.libroId !== loan.libroId) {
+      const book = await this.bookRepository.findOneBy({ id: updateLoanDto.libroId });
+      if (!book) {
+        throw new NotFoundException(`Libro con ID ${updateLoanDto.libroId} no encontrado`);
+      }
+      loan.libroId = updateLoanDto.libroId;
+    }
+
+    if (updateLoanDto.estudianteId) {
+      await this.ensureStudentProfile(updateLoanDto.estudianteId);
+      loan.estudianteId = updateLoanDto.estudianteId;
+    }
+
+    if (updateLoanDto.fechaLimiteDevolucion) {
+      loan.fechaLimiteDevolucion = new Date(updateLoanDto.fechaLimiteDevolucion);
+    }
+
+    if (updateLoanDto.estado) {
+      loan.estado = updateLoanDto.estado;
+    }
+
+    return this.loanRepository.save(loan);
+  }
+
+  async remove(id: number): Promise<void> {
+    const loan = await this.loanRepository.findOneBy({ id });
+    if (!loan) {
+      throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
+    }
+    await this.loanRepository.remove(loan);
   }
 
   async payFine(multaId: number): Promise<Payment> {

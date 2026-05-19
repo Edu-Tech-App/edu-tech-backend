@@ -101,15 +101,8 @@ export class GradesService {
   async findAll(filters: { periodoAcademico?: string; asignaturaId?: number }) {
     const query = this.gradesRepository.createQueryBuilder('grade')
       .leftJoinAndSelect('grade.estudiante', 'estudiante')
-      .select([
-        'grade.id',
-        'grade.periodoAcademico',
-        'grade.valor',
-        'grade.fechaRegistro',
-        'grade.asignaturaId',
-        'estudiante.id',
-        'estudiante.nombreCompleto',
-      ]);
+      .leftJoinAndSelect('estudiante.user', 'studentUser')
+      .leftJoinAndSelect('grade.asignatura', 'asignatura');
 
     if (filters.periodoAcademico) {
       query.andWhere('grade.periodoAcademico = :periodo', { periodo: filters.periodoAcademico });
@@ -125,6 +118,8 @@ export class GradesService {
   async findByEstudiante(estudianteId: number, periodoAcademico?: string) {
     const query = this.gradesRepository.createQueryBuilder('grade')
       .leftJoinAndSelect('grade.estudiante', 'estudiante')
+      .leftJoinAndSelect('estudiante.user', 'studentUser')
+      .leftJoinAndSelect('grade.asignatura', 'asignatura')
       .where('grade.estudianteId = :estudianteId', { estudianteId });
 
     if (periodoAcademico) {

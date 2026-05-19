@@ -1,7 +1,10 @@
-import { Controller, Post, Body, UseGuards, Patch, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Patch, Param, ParseIntPipe, Get, Put, Delete } from '@nestjs/common';
 import { StudyRoomsService } from '../services/study-rooms.service';
 import { CreateStudyRoomDto } from '../dto/study-rooms/create-room.dto';
 import { CreateReservationDto } from '../dto/study-rooms/create-reservation.dto';
+import { AdminCreateReservationDto } from '../dto/study-rooms/admin-create-reservation.dto';
+import { AdminUpdateReservationDto } from '../dto/study-rooms/admin-update-reservation.dto';
+import { UpdateStudyRoomDto } from '../dto/study-rooms/update-room.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -26,6 +29,27 @@ export class StudyRoomsController {
     );
   }
 
+  @Get()
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO, UserRole.ESTUDIANTE, UserRole.DOCENTE)
+  @ApiOperation({ summary: 'Listar salas de estudio' })
+  findAllRooms() {
+    return this.studyRoomsService.findAllRooms();
+  }
+
+  @Put(':id')
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Actualizar una sala de estudio' })
+  updateRoom(@Param('id', ParseIntPipe) id: number, @Body() updateRoomDto: UpdateStudyRoomDto) {
+    return this.studyRoomsService.updateRoom(id, updateRoomDto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Eliminar una sala de estudio' })
+  deleteRoom(@Param('id', ParseIntPipe) id: number) {
+    return this.studyRoomsService.deleteRoom(id);
+  }
+
   @Post('reservations')
   @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE)
   @ApiOperation({ summary: 'Crear una reserva de sala' })
@@ -40,10 +64,55 @@ export class StudyRoomsController {
     );
   }
 
+  @Get('reservations')
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Listar todas las reservas de salas' })
+  findAllReservations() {
+    return this.studyRoomsService.findAllReservations();
+  }
+
+  @Get('reservations/user/:userId')
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Listar reservas de salas por usuario' })
+  findReservationsByUser(@Param('userId', ParseIntPipe) userId: number) {
+    return this.studyRoomsService.findReservationsByUser(userId);
+  }
+
+  @Post('reservations/admin')
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Crear una reserva desde gestión administrativa' })
+  adminCreateReservation(@Body() createReservationDto: AdminCreateReservationDto) {
+    return this.studyRoomsService.adminCreateReservation(createReservationDto);
+  }
+
+  @Put('reservations/:id')
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Actualizar una reserva desde gestión administrativa' })
+  adminUpdateReservation(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateReservationDto: AdminUpdateReservationDto,
+  ) {
+    return this.studyRoomsService.adminUpdateReservation(id, updateReservationDto);
+  }
+
   @Patch('reservations/:id/cancel')
   @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE)
   @ApiOperation({ summary: 'Cancelar una reserva (mínimo 1 hora antes)' })
   cancelReservation(@Param('id', ParseIntPipe) id: number) {
     return this.studyRoomsService.cancelReservation(id);
+  }
+
+  @Patch('reservations/:id/admin-cancel')
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Cancelar una reserva desde gestión administrativa' })
+  adminCancelReservation(@Param('id', ParseIntPipe) id: number) {
+    return this.studyRoomsService.adminCancelReservation(id);
+  }
+
+  @Delete('reservations/:id')
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @ApiOperation({ summary: 'Eliminar una reserva desde gestión administrativa' })
+  adminDeleteReservation(@Param('id', ParseIntPipe) id: number) {
+    return this.studyRoomsService.adminDeleteReservation(id);
   }
 }
