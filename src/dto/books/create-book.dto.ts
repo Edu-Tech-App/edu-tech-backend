@@ -1,14 +1,14 @@
 import {
-  IsString,
   IsNotEmpty,
   IsOptional,
   IsInt,
   Min,
   IsEnum,
   MaxLength,
+  IsString,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { BookStatus } from '../../entities/book.entity';
+import { BookCategory, BookStatus } from '../../entities/book.entity';
 
 export class CreateBookDto {
   @ApiProperty({ example: 'Cien años de soledad', description: 'Título del libro' })
@@ -23,17 +23,31 @@ export class CreateBookDto {
   @MaxLength(200)
   autor: string;
 
-  @ApiProperty({ example: 'Novela', description: 'Categoría o género', required: false })
-  @IsString()
+  @ApiProperty({
+    example: BookCategory.INGENIERIA_SISTEMAS,
+    enum: BookCategory,
+    description: 'Categoría académica del libro según carrera o área institucional',
+    required: false,
+  })
+  @IsEnum(BookCategory)
   @IsOptional()
-  @MaxLength(50)
-  categoria?: string;
+  categoria?: BookCategory;
 
   @ApiProperty({ example: 'Editorial Sudamericana', description: 'Editorial del libro', required: false })
   @IsString()
   @IsOptional()
   @MaxLength(100)
   editorial?: string;
+
+  @ApiProperty({
+    example: '/uploads/books/clean-code.jpg',
+    description: 'Ruta pública de la portada del libro',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  portadaUrl?: string;
 
   @ApiProperty({ example: 5, description: 'Cantidad inicial disponible', required: false })
   @IsInt()

@@ -21,6 +21,48 @@ export class UsersService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  private isStudentRole(rol: string) {
+    return rol === 'ESTUDIANTE' || rol === UserRole.ESTUDIANTE;
+  }
+
+  private isTeacherRole(rol: string) {
+    return rol === 'DOCENTE' || rol === UserRole.DOCENTE;
+  }
+
+  private async ensureRoleProfile(user: User) {
+    if (this.isStudentRole(String(user.rol))) {
+      const existingStudent = await this.studentRepository.findOne({
+        where: { usuarioId: user.id },
+      });
+
+      if (!existingStudent) {
+        const student = this.studentRepository.create({
+          usuarioId: user.id,
+          codigoEstudiantil: `EST-${user.id}`,
+          carrera: 'Por definir',
+          semestreActual: 1,
+        });
+        await this.studentRepository.save(student);
+      }
+    }
+
+    if (this.isTeacherRole(String(user.rol))) {
+      const existingTeacher = await this.teacherRepository.findOne({
+        where: { usuarioId: user.id },
+      });
+
+      if (!existingTeacher) {
+        const teacher = this.teacherRepository.create({
+          usuarioId: user.id,
+          especialidad: 'General',
+          departamento: 'General',
+          cubiculo: 'N/A',
+        });
+        await this.teacherRepository.save(teacher);
+      }
+    }
+  }
+
   async register(registerDto: RegisterUserDto) {
     const { nombreCompleto, documentoIdentidad, correo, password, rol } = registerDto;
 
@@ -52,34 +94,22 @@ export class UsersService {
     });
 
     await this.usersRepository.save(user);
+    await this.ensureRoleProfile(user);
 
-    if (String(user.rol) === 'ESTUDIANTE') {
-      const student = this.studentRepository.create({
-        usuarioId: user.id,
-        codigoEstudiantil: `EST-${user.id}`,
-        carrera: 'Por definir',
-        semestreActual: 1,
-      });
-      await this.studentRepository.save(student);
-    } else if (String(user.rol) === 'DOCENTE') {
-      const teacher = this.teacherRepository.create({
-        usuarioId: user.id,
-        especialidad: 'General',
-        departamento: 'General',
-        cubiculo: 'N/A',
-      });
-      await this.teacherRepository.save(teacher);
-    }
-
-    // Enviar correo de bienvenida
-    await this.notificationsService.sendWelcomeEmail(user.correoInstitucional, user.nombreCompleto);
-
-    return {
+    const response = {
       id: user.id,
       nombreCompleto: user.nombreCompleto,
       correoInstitucional: user.correoInstitucional,
       rol: user.rol,
     };
+
+    // El alta del usuario no debe esperar la latencia del SMTP.
+    void this.notificationsService.sendWelcomeEmail(
+      user.correoInstitucional,
+      user.nombreCompleto,
+    );
+
+    return response;
   }
 
   async update(id: number, updateDto: UpdateUserDto) {
@@ -122,6 +152,7 @@ export class UsersService {
     }
 
     await this.usersRepository.save(user);
+    await this.ensureRoleProfile(user);
 
     return {
       id: user.id,
@@ -155,6 +186,17 @@ export class UsersService {
     return this.usersRepository.find({
       select: ['id', 'nombreCompleto', 'correoInstitucional', 'rol', 'estado'],
     });
+  }
+
+  async findTeachers() {
+    const teachers = await this.teacherRepository.find({
+      relations: ['user'],
+    });
+
+    return teachers.map((teacher) => ({
+      id: teacher.usuarioId,
+      nombreCompleto: teacher.user?.nombreCompleto ?? `Docente ${teacher.usuarioId}`,
+    }));
   }
 
   async findOne(id: number) {

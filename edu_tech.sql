@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS `asignaturas` (
   `id` int NOT NULL AUTO_INCREMENT,
   `codigo` varchar(20) NOT NULL,
   `nombre` varchar(100) NOT NULL,
-  `docente_id` int NOT NULL,
+  `carrera` enum('INGENIERIA_SISTEMAS','INGENIERIA_CIVIL','INGENIERIA_INDUSTRIAL','ADMINISTRACION','CONTADURIA','ECONOMIA','DERECHO','MEDICINA','ENFERMERIA','PSICOLOGIA','EDUCACION','MATEMATICAS') NOT NULL,
+  `semestre` int NOT NULL,
+  `creditos` int NOT NULL,
+  `docente_id` int DEFAULT NULL,
   `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `codigo` (`codigo`),
@@ -33,9 +36,9 @@ CREATE TABLE IF NOT EXISTS `asignaturas` (
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Volcando datos para la tabla edu_tech.asignaturas: ~2 rows (aproximadamente)
-INSERT INTO `asignaturas` (`id`, `codigo`, `nombre`, `docente_id`, `creado_en`) VALUES
-	(1, 'INF101', 'Programación Básica', 2, '2026-04-17 22:04:02'),
-	(2, 'INF202', 'Bases de Datos', 2, '2026-04-17 22:04:02');
+INSERT INTO `asignaturas` (`id`, `codigo`, `nombre`, `carrera`, `semestre`, `creditos`, `docente_id`, `creado_en`) VALUES
+	(1, 'INF101', 'Programación Básica', 'INGENIERIA_SISTEMAS', 1, 3, 2, '2026-04-17 22:04:02'),
+	(2, 'INF202', 'Bases de Datos', 'INGENIERIA_SISTEMAS', 3, 4, 2, '2026-04-17 22:04:02');
 
 -- Volcando estructura para tabla edu_tech.calificaciones
 CREATE TABLE IF NOT EXISTS `calificaciones` (
@@ -91,8 +94,9 @@ CREATE TABLE IF NOT EXISTS `libros` (
   `id` int NOT NULL AUTO_INCREMENT,
   `titulo` varchar(200) NOT NULL,
   `autor` varchar(100) NOT NULL,
-  `categoria` varchar(50) DEFAULT NULL,
+  `categoria` enum('INGENIERIA_SISTEMAS','INGENIERIA_CIVIL','INGENIERIA_INDUSTRIAL','ADMINISTRACION','CONTADURIA','ECONOMIA','DERECHO','MEDICINA','ENFERMERIA','PSICOLOGIA','EDUCACION','MATEMATICAS') DEFAULT NULL,
   `editorial` varchar(100) DEFAULT NULL,
+  `portada_url` varchar(255) DEFAULT NULL,
   `cantidad_disponible` int DEFAULT '0',
   `estado` enum('DISPONIBLE','MANTENIMIENTO','BAJA') DEFAULT 'DISPONIBLE',
   `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -100,9 +104,9 @@ CREATE TABLE IF NOT EXISTS `libros` (
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Volcando datos para la tabla edu_tech.libros: ~0 rows (aproximadamente)
-INSERT INTO `libros` (`id`, `titulo`, `autor`, `categoria`, `editorial`, `cantidad_disponible`, `estado`, `creado_en`) VALUES
-	(1, 'Clean Code', 'Robert Martin', 'Programación', 'Prentice Hall', 5, 'DISPONIBLE', '2026-04-17 22:04:02'),
-	(2, 'Algoritmos', 'Thomas Cormen', 'Computación', 'MIT Press', 3, 'DISPONIBLE', '2026-04-17 22:04:02');
+INSERT INTO `libros` (`id`, `titulo`, `autor`, `categoria`, `editorial`, `portada_url`, `cantidad_disponible`, `estado`, `creado_en`) VALUES
+	(1, 'Clean Code', 'Robert Martin', 'INGENIERIA_SISTEMAS', 'Prentice Hall', NULL, 5, 'DISPONIBLE', '2026-04-17 22:04:02'),
+	(2, 'Algoritmos', 'Thomas Cormen', 'INGENIERIA_SISTEMAS', 'MIT Press', NULL, 3, 'DISPONIBLE', '2026-04-17 22:04:02');
 
 -- Volcando estructura para tabla edu_tech.multas
 CREATE TABLE IF NOT EXISTS `multas` (
