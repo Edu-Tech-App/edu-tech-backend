@@ -43,12 +43,11 @@ export class User {
   })
   rol!: UserRole;
 
-  @Column({
-    type: 'enum',
-    enum: UserStatus,
-    default: UserStatus.ACTIVO,
-  })
+  @Column({ name: 'estado', type: 'enum', enum: UserStatus, default: UserStatus.ACTIVO })
   estado!: UserStatus;
+
+  @Column({ name: 'actualizado_por_id', type: 'int', nullable: true })
+  actualizadoPorId!: number | null;
 
   @CreateDateColumn({ name: 'creado_en' })
   creadoEn!: Date;
