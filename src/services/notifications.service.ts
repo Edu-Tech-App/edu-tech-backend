@@ -136,6 +136,20 @@ export class NotificationsService implements OnModuleInit {
     await this.sendEmail(email, 'Confirmación de Reserva de Sala', content, 'success');
   }
 
+  async sendReservationCancellation(email: string, userName: string, roomName: string, date: Date, startTime: string) {
+    const content = `
+      <h2>Hola, ${userName}</h2>
+      <p>Te informamos que tu reserva de sala ha sido <strong>CANCELADA</strong>:</p>
+      <div class="info-box error">
+        <p><strong>Sala:</strong> ${roomName}</p>
+        <p><strong>Fecha:</strong> ${date.toLocaleDateString()}</p>
+        <p><strong>Horario:</strong> ${startTime}</p>
+      </div>
+      <p>Si no realizaste esta acción, por favor contacta con el administrador de la biblioteca.</p>
+    `;
+    await this.sendEmail(email, 'Notificación de Cancelación de Reserva', content, 'error');
+  }
+
   async sendGradeNotification(email: string, studentName: string, subjectName: string, grade: number, isUpdate = false) {
     const action = isUpdate ? 'actualizada' : 'registrada';
     const content = `
