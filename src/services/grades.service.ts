@@ -34,6 +34,16 @@ export class GradesService {
       throw new ForbiddenException('Solo los docentes pueden registrar calificaciones');
     }
 
+    const asignatura = await this.subjectsRepository.findOne({ where: { id: asignaturaId } });
+    if (!asignatura) {
+      throw new NotFoundException('Asignatura no encontrada');
+    }
+
+    //Validación de titularidad (HU-03)
+    if (asignatura.docenteId !== docenteId) {
+      throw new ForbiddenException('No eres el docente titular asignado a esta asignatura');
+    }
+
     const grade = this.gradesRepository.create({
       estudianteId,
       asignaturaId,
@@ -46,13 +56,12 @@ export class GradesService {
 
     // Notificar al estudiante
     const user = await this.usersRepository.findOne({ where: { id: estudianteId } });
-    const asignatura = await this.subjectsRepository.findOne({ where: { id: asignaturaId } });
     
     if (user && user.correoInstitucional) {
       this.notificationsService.sendGradeNotification(
         user.correoInstitucional,
         user.nombreCompleto,
-        asignatura ? asignatura.nombre : 'Asignatura ID: ' + asignaturaId,
+        asignatura.nombre,
         valor
       );
     }
@@ -75,6 +84,13 @@ export class GradesService {
       throw new NotFoundException('Calificación no encontrada');
     }
 
+    const asignatura = await this.subjectsRepository.findOne({ where: { id: grade.asignaturaId } });
+    
+    // ✅ Validación de titularidad (HU-04)
+    if (!asignatura || asignatura.docenteId !== docenteId) {
+      throw new ForbiddenException('No eres el docente titular asignado a esta asignatura y no puedes modificar la nota');
+    }
+
     grade.valorAnterior = grade.valor;
     grade.valor = valor;
     grade.actualizadoPor = docenteId;
@@ -83,7 +99,6 @@ export class GradesService {
 
     // Notificar al estudiante
     const user = await this.usersRepository.findOne({ where: { id: grade.estudianteId } });
-    const asignatura = await this.subjectsRepository.findOne({ where: { id: grade.asignaturaId } });
     
     if (user && user.correoInstitucional) {
       this.notificationsService.sendGradeNotification(
