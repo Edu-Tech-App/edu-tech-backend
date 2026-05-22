@@ -90,7 +90,6 @@ export class StudyRoomsService {
     if (fechaPropuesta > limite) {
       throw new BadRequestException('Solo se puede reservar con un máximo de 7 días de anticipación');
     }
-
     if (fechaPropuesta < hoy) {
       throw new BadRequestException('No se puede reservar en una fecha pasada');
     }
@@ -177,24 +176,16 @@ export class StudyRoomsService {
     this.validateTimeRange(horaInicio, horaFin);
     this.validateReservationDateWindow(fechaReserva);
 
-    // Validación: El usuario no puede tener otra reserva ACTIVA para esta misma sala
-    const searchCriteria: any = {
-      salaId,
-      estado: ReservationStatus.ACTIVA,
-    };
-
+    const searchCriteria: any = { salaId, estado: ReservationStatus.ACTIVA };
     if (isEstudiante) {
       searchCriteria.estudianteId = userId;
     } else {
       searchCriteria.docenteId = userId;
     }
 
-    const userActiveRes = await this.reservationRepository.findOne({
-      where: searchCriteria,
-    });
-
+    const userActiveRes = await this.reservationRepository.findOne({ where: searchCriteria });
     if (userActiveRes) {
-      throw new BadRequestException('Ya tienes una reserva activa para esta sala. Debes usarla o cancelarla antes de hacer otra.');
+      throw new BadRequestException('Ya tienes una reserva activa para esta sala.');
     }
 
     await this.validateOverlappingReservation(salaId, fechaReserva, horaInicio, horaFin);
@@ -287,26 +278,18 @@ export class StudyRoomsService {
       relations: ['sala'],
     });
 
-    if (!reservation) {
-      throw new NotFoundException('Reserva no encontrada');
-    }
-
+    if (!reservation) throw new NotFoundException('Reserva no encontrada');
     if (reservation.estado !== ReservationStatus.ACTIVA) {
       throw new BadRequestException('Solo se pueden cancelar reservas activas');
     }
 
-    // Validación: Falta más de 1 hora para el inicio
     const ahora = new Date();
     const fechaReserva = new Date(reservation.fechaReserva);
     const [horas, minutos] = reservation.horaInicio.split(':').map(Number);
-    
-    // Configurar la fecha y hora exacta de inicio de la reserva
     const fechaInicioCompleta = new Date(fechaReserva);
     fechaInicioCompleta.setHours(horas, minutos, 0, 0);
 
-    const diferenciaMs = fechaInicioCompleta.getTime() - ahora.getTime();
-    const diferenciaHoras = diferenciaMs / (1000 * 60 * 60);
-
+    const diferenciaHoras = (fechaInicioCompleta.getTime() - ahora.getTime()) / (1000 * 60 * 60);
     if (diferenciaHoras < 1) {
       throw new BadRequestException('No se puede cancelar una reserva con menos de 1 hora de anticipación');
     }

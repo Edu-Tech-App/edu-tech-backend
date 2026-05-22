@@ -59,13 +59,19 @@ export class LoansService {
     return this.studentRepository.save(estudiante);
   }
 
+  async findByUser(estudianteId: number): Promise<Loan[]> {
+    return this.loanRepository.find({
+      where: { estudianteId },
+      relations: ['libro', 'multa'],
+      order: { fechaPrestamo: 'DESC' },
+    });
+  }
+
   async create(createLoanDto: CreateLoanDto): Promise<Loan> {
     const { libroId, estudianteId, fechaLimiteDevolucion } = createLoanDto;
 
     const libro = await this.bookRepository.findOneBy({ id: libroId });
-    if (!libro) {
-      throw new NotFoundException(`Libro con ID ${libroId} no encontrado`);
-    }
+    if (!libro) throw new NotFoundException(`Libro con ID ${libroId} no encontrado`);
 
     if (libro.cantidadDisponible <= 0 || libro.estado !== BookStatus.DISPONIBLE) {
       throw new BadRequestException('El libro no está disponible para préstamo');
@@ -80,9 +86,7 @@ export class LoansService {
       .getCount();
 
     if (multasPendientes > 0) {
-      throw new BadRequestException(
-        'El estudiante tiene multas pendientes y no puede realizar nuevos préstamos',
-      );
+      throw new BadRequestException('El estudiante tiene multas pendientes y no puede realizar nuevos préstamos');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -98,20 +102,17 @@ export class LoansService {
       });
 
       const prestamoGuardado = await queryRunner.manager.save(nuevoPrestamo);
-
       libro.cantidadDisponible -= 1;
       await queryRunner.manager.save(libro);
-
       await queryRunner.commitTransaction();
 
-      // Notificar al estudiante
       const user = await this.userRepository.findOne({ where: { id: estudianteId } });
       if (user && user.correoInstitucional) {
         this.notificationsService.sendLoanConfirmation(
           user.correoInstitucional,
           user.nombreCompleto,
           libro.titulo,
-          nuevoPrestamo.fechaLimiteDevolucion
+          nuevoPrestamo.fechaLimiteDevolucion,
         );
       }
 
@@ -149,6 +150,28 @@ export class LoansService {
       .getMany();
   }
 
+  async findAllFines() {
+    const fines = await this.fineRepository.find({
+      relations: ['prestamo', 'prestamo.libro', 'prestamo.estudiante', 'prestamo.estudiante.user'],
+    });
+
+    const totalPendiente = fines
+      .filter(f => f.estado === FineStatus.PENDIENTE)
+      .reduce((sum, f) => sum + Number(f.monto), 0);
+
+    const usuariosConMultas = new Set(
+      fines
+        .filter(f => f.estado === FineStatus.PENDIENTE)
+        .map(f => f.prestamo?.estudianteId),
+    ).size;
+
+    return {
+      fines,
+      totalPendiente,
+      usuariosConMultas,
+    };
+  }
+
   async returnLoan(id: number): Promise<Loan> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -160,37 +183,26 @@ export class LoansService {
         relations: ['libro'],
       });
 
-      if (!prestamo) {
-        throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
-      }
-
-      if (prestamo.estado === LoanStatus.DEVUELTO) {
-        throw new BadRequestException('El préstamo ya ha sido devuelto');
-      }
+      if (!prestamo) throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
+      if (prestamo.estado === LoanStatus.DEVUELTO) throw new BadRequestException('El préstamo ya ha sido devuelto');
 
       prestamo.fechaDevolucionReal = new Date();
       prestamo.estado = LoanStatus.DEVUELTO;
 
       const fechaLimite = new Date(prestamo.fechaLimiteDevolucion);
-      const fechaReal = prestamo.fechaDevolucionReal;
-      
       fechaLimite.setHours(0, 0, 0, 0);
-      const fechaRealCopia = new Date(fechaReal);
+      const fechaRealCopia = new Date(prestamo.fechaDevolucionReal);
       fechaRealCopia.setHours(0, 0, 0, 0);
 
-      const diferenciaTiempo = fechaRealCopia.getTime() - fechaLimite.getTime();
-      const diasRetraso = Math.ceil(diferenciaTiempo / (1000 * 3600 * 24));
+      const diasRetraso = Math.ceil((fechaRealCopia.getTime() - fechaLimite.getTime()) / (1000 * 3600 * 24));
 
       if (diasRetraso > 0) {
-        const montoMulta = diasRetraso * 1000;
-
         const nuevaMulta = queryRunner.manager.create(Fine, {
           prestamoId: prestamo.id,
-          monto: montoMulta,
-          diasRetraso: diasRetraso,
+          monto: diasRetraso * 1000,
+          diasRetraso,
           estado: FineStatus.PENDIENTE,
         });
-
         await queryRunner.manager.save(nuevaMulta);
       }
 
@@ -200,24 +212,17 @@ export class LoansService {
       }
 
       const prestamoActualizado = await queryRunner.manager.save(prestamo);
-
       await queryRunner.commitTransaction();
 
-      // Notificar al estudiante si hay multa
-      const user = await this.userRepository.findOne({ 
-        where: { id: prestamo.estudianteId } 
-      });
-      
-      if (user && user.correoInstitucional) {
-        if (diasRetraso > 0) {
-          this.notificationsService.sendFineNotification(
-            user.correoInstitucional,
-            user.nombreCompleto,
-            prestamo.libro.titulo,
-            diasRetraso * 1000,
-            diasRetraso
-          );
-        }
+      const user = await this.userRepository.findOne({ where: { id: prestamo.estudianteId } });
+      if (user && user.correoInstitucional && diasRetraso > 0) {
+        this.notificationsService.sendFineNotification(
+          user.correoInstitucional,
+          user.nombreCompleto,
+          prestamo.libro.titulo,
+          diasRetraso * 1000,
+          diasRetraso,
+        );
       }
 
       return prestamoActualizado;
@@ -273,18 +278,11 @@ export class LoansService {
 
   async payFine(multaId: number): Promise<Payment> {
     const multa = await this.fineRepository.findOneBy({ id: multaId });
-
-    if (!multa) {
-      throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
-    }
-
-    if (multa.estado !== FineStatus.PENDIENTE) {
-      throw new BadRequestException('La multa ya está pagada o anulada');
-    }
+    if (!multa) throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
+    if (multa.estado !== FineStatus.PENDIENTE) throw new BadRequestException('La multa ya está pagada o anulada');
 
     const isApproved = Math.random() > 0.2;
     const referenciaPasarela = 'REF-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-
     const paymentStatus = isApproved ? PaymentStatus.APROBADO : PaymentStatus.RECHAZADO;
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -295,7 +293,7 @@ export class LoansService {
       const payment = this.paymentRepository.create({
         multaId: multa.id,
         monto: multa.monto,
-        referenciaPasarela: referenciaPasarela,
+        referenciaPasarela,
         estado: paymentStatus,
       });
 
@@ -305,7 +303,6 @@ export class LoansService {
         multa.estado = FineStatus.PAGADA;
         await queryRunner.manager.save(multa);
 
-        // Notificar al estudiante
         const loan = await queryRunner.manager.findOne(Loan, {
           where: { id: multa.prestamoId },
           relations: ['estudiante', 'estudiante.user', 'libro'],
@@ -323,9 +320,7 @@ export class LoansService {
 
       await queryRunner.commitTransaction();
 
-      if (!isApproved) {
-        throw new BadRequestException('El pago fue RECHAZADO por la pasarela simulada');
-      }
+      if (!isApproved) throw new BadRequestException('El pago fue RECHAZADO por la pasarela simulada');
 
       return savedPayment;
     } catch (error) {

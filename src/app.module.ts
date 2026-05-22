@@ -14,6 +14,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { StudyRoomsModule } from './modules/study-rooms.module';
 import { NotificationsModule } from './modules/notifications.module';
 import { SubjectsModule } from './modules/subjects.module';
+import { StatsModule } from './modules/stats.module'; // ✅ Nuevo
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { SubjectsModule } from './modules/subjects.module';
     StudyRoomsModule,
     NotificationsModule,
     SubjectsModule,
+    StatsModule, // ✅ Nuevo
   ],
   controllers: [AppController],
   providers: [AppService],
