@@ -4,7 +4,7 @@ import { UserRole } from '../../entities/user.entity';
 
 export const ROLES_KEY = 'roles';
 
-// ✅ Decorador corregido — usa SetMetadata para guardar los roles
+// usa SetMetadata para guardar los roles
 export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
 
 @Injectable()
@@ -27,7 +27,7 @@ export class RolesGuard implements CanActivate {
       return false;
     }
 
-    // ✅ Compara en minúscula para que coincida con los valores de la BD
+    // Compara en minúscula para que coincida con los valores de la BD
     return requiredRoles.some((role) => 
       user.rol?.toLowerCase() === role.toLowerCase()
     );

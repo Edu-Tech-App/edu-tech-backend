@@ -47,6 +47,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
+    // ✅ RateLimitGuard como guard global
+    {
+      provide: APP_GUARD,
+      useClass: RateLimitGuard,
+    },
   ],
   exports: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard, RateLimitGuard],
 })
