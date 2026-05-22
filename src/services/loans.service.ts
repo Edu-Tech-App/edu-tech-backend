@@ -135,14 +135,28 @@ export class LoansService {
     });
   }
 
-  async findByStudent(estudianteId: number): Promise<Loan[]> {
-    return this.loanRepository.find({
-      where: { estudianteId },
-      relations: ['libro', 'estudiante', 'estudiante.user', 'multa'],
-      order: {
-        fechaPrestamo: 'DESC',
-      },
-    });
+  async findByStudent(estudianteId: number, status?: LoanStatus, startDate?: string, endDate?: string): Promise<Loan[]> {
+    const query = this.loanRepository.createQueryBuilder('loan')
+      .leftJoinAndSelect('loan.libro', 'libro')
+      .leftJoinAndSelect('loan.estudiante', 'estudiante')
+      .leftJoinAndSelect('estudiante.user', 'user')
+      .leftJoinAndSelect('loan.multa', 'multa')
+      .where('loan.estudianteId = :estudianteId', { estudianteId });
+
+    if (status) {
+      query.andWhere('loan.estado = :status', { status });
+    }
+
+    if (startDate && endDate) {
+      query.andWhere('loan.fechaPrestamo BETWEEN :startDate AND :endDate', { 
+        startDate, 
+        endDate 
+      });
+    }
+
+    query.orderBy('loan.fechaPrestamo', 'DESC');
+
+    return query.getMany();
   }
 
   async findPendingFinesByUser(estudianteId: number): Promise<Fine[]> {

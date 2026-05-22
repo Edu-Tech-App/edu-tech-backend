@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, UseGuards, Query } from '@nestjs/common';
 import { Put, Delete } from '@nestjs/common';
 import { LoansService } from '../services/loans.service';
 import { CreateLoanDto } from '../dto/loans/create-loan.dto';
@@ -7,7 +7,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { LoanStatus } from '../entities/loan.entity';
+import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('loans')
 @ApiBearerAuth()
@@ -49,8 +50,16 @@ export class LoansController {
 
   @Get('student/:userId')
   @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
-  findByStudent(@Param('userId') userId: string) {
-    return this.loansService.findByStudent(+userId);
+  @ApiQuery({ name: 'status', required: false, enum: LoanStatus })
+  @ApiQuery({ name: 'startDate', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({ name: 'endDate', required: false, type: String, description: 'YYYY-MM-DD' })
+  findByStudent(
+    @Param('userId') userId: string,
+    @Query('status') status?: LoanStatus,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.loansService.findByStudent(+userId, status, startDate, endDate);
   }
 
   @Patch(':id/return')
