@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, Get, Param, ParseIntPipe, Put, Patch } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, Get, Param, ParseIntPipe, Put, Patch, Req } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
 import { RegisterUserDto } from '../dto/users/register-user.dto';
 import { UpdateUserDto, UpdateUserStatusDto } from '../dto/users/update-user.dto';
@@ -48,7 +48,9 @@ export class UsersController {
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdateUserStatusDto,
+    @Req() req: any,
   ) {
-    return this.usersService.updateStatus(id, updateStatusDto);
+    const adminId = req.user.userId || req.user.id;
+    return this.usersService.updateStatus(id, updateStatusDto, adminId);
   }
 }

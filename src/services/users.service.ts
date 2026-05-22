@@ -163,7 +163,7 @@ export class UsersService {
     };
   }
 
-  async updateStatus(id: number, updateStatusDto: UpdateUserStatusDto) {
+  async updateStatus(id: number, updateStatusDto: UpdateUserStatusDto, adminId: number) {
     const user = await this.usersRepository.findOne({ where: { id } });
     
     if (!user) {
@@ -171,6 +171,7 @@ export class UsersService {
     }
 
     user.estado = updateStatusDto.estado as UserStatus;
+    user.actualizadoPorId = adminId;
     await this.usersRepository.save(user);
 
     return {
@@ -179,6 +180,7 @@ export class UsersService {
       correoInstitucional: user.correoInstitucional,
       rol: user.rol,
       estado: user.estado,
+      actualizadoPorId: user.actualizadoPorId,
     };
   }
 
