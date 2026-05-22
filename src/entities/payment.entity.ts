@@ -4,6 +4,7 @@ import { Fine } from './fine.entity';
 export enum PaymentStatus {
   APROBADO = 'APROBADO',
   RECHAZADO = 'RECHAZADO',
+  PENDIENTE = 'PENDIENTE',
 }
 
 @Entity('pagos_multas')

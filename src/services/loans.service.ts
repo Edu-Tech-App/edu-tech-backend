@@ -2,9 +2,11 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Loan, LoanStatus } from '../entities/loan.entity';
 import { Fine, FineStatus } from '../entities/fine.entity';
 import { Book, BookStatus } from '../entities/book.entity';
@@ -17,6 +19,8 @@ import { NotificationsService } from './notifications.service';
 
 @Injectable()
 export class LoansService {
+  private readonly logger = new Logger(LoansService.name);
+
   constructor(
     @InjectRepository(Loan)
     private loanRepository: Repository<Loan>,
@@ -276,14 +280,78 @@ export class LoansService {
     await this.loanRepository.remove(loan);
   }
 
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async handlePendingPayments() {
+    this.logger.log('Iniciando proceso de reintento para pagos PENDIENTES...');
+
+    const pendingPayments = await this.paymentRepository.find({
+      where: { estado: PaymentStatus.PENDIENTE },
+      relations: ['multa'],
+    });
+
+    if (pendingPayments.length === 0) {
+      this.logger.log('No hay pagos pendientes por procesar.');
+      return;
+    }
+
+    for (const payment of pendingPayments) {
+      const rand = Math.random();
+      let newStatus: PaymentStatus;
+      if (rand > 0.3) {
+        newStatus = PaymentStatus.APROBADO;
+      } else if (rand > 0.1) {
+        newStatus = PaymentStatus.PENDIENTE;
+      } else {
+        newStatus = PaymentStatus.RECHAZADO;
+      }
+
+      if (newStatus !== PaymentStatus.PENDIENTE) {
+        payment.estado = newStatus;
+        await this.paymentRepository.save(payment);
+
+        if (newStatus === PaymentStatus.APROBADO) {
+          const multa = payment.multa;
+          multa.estado = FineStatus.PAGADA;
+          await this.fineRepository.save(multa);
+
+          const loan = await this.loanRepository.findOne({
+            where: { id: multa.prestamoId },
+            relations: ['estudiante', 'estudiante.user', 'libro'],
+          });
+
+          if (loan?.estudiante?.user?.correoInstitucional) {
+            this.notificationsService.sendPaymentConfirmation(
+              loan.estudiante.user.correoInstitucional,
+              loan.estudiante.user.nombreCompleto,
+              multa.monto,
+              `Multa por el libro: ${loan.libro.titulo} (Procesado automáticamente)`,
+            ).catch(e => this.logger.error('Error enviando notificación:', e));
+          }
+          this.logger.log(`Pago para multa ${multa.id} APROBADO en reintento.`);
+        } else {
+          this.logger.log(`Pago para multa ${payment.multaId} RECHAZADO definitivamente en reintento.`);
+        }
+      }
+    }
+  }
+
   async payFine(multaId: number): Promise<Payment> {
     const multa = await this.fineRepository.findOneBy({ id: multaId });
     if (!multa) throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
     if (multa.estado !== FineStatus.PENDIENTE) throw new BadRequestException('La multa ya está pagada o anulada');
 
-    const isApproved = Math.random() > 0.2;
+    // Nueva simulación: 60% aprobado, 20% pendiente, 20% rechazado
+    const rand = Math.random();
+    let paymentStatus: PaymentStatus;
+    if (rand > 0.4) {
+      paymentStatus = PaymentStatus.APROBADO;
+    } else if (rand > 0.2) {
+      paymentStatus = PaymentStatus.PENDIENTE;
+    } else {
+      paymentStatus = PaymentStatus.RECHAZADO;
+    }
+
     const referenciaPasarela = 'REF-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-    const paymentStatus = isApproved ? PaymentStatus.APROBADO : PaymentStatus.RECHAZADO;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -299,7 +367,7 @@ export class LoansService {
 
       const savedPayment = await queryRunner.manager.save(payment);
 
-      if (isApproved) {
+      if (paymentStatus === PaymentStatus.APROBADO) {
         multa.estado = FineStatus.PAGADA;
         await queryRunner.manager.save(multa);
 
@@ -320,7 +388,9 @@ export class LoansService {
 
       await queryRunner.commitTransaction();
 
-      if (!isApproved) throw new BadRequestException('El pago fue RECHAZADO por la pasarela simulada');
+      if (paymentStatus === PaymentStatus.RECHAZADO) {
+        throw new BadRequestException('El pago fue RECHAZADO por la pasarela simulada (Fondos insuficientes)');
+      }
 
       return savedPayment;
     } catch (error) {
