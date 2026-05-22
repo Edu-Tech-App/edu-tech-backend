@@ -275,7 +275,7 @@ export class StudyRoomsService {
   async cancelReservation(id: number): Promise<Reservation> {
     const reservation = await this.reservationRepository.findOne({
       where: { id },
-      relations: ['sala'],
+      relations: ['sala', 'estudiante', 'estudiante.user', 'docente', 'docente.user'],
     });
 
     if (!reservation) throw new NotFoundException('Reserva no encontrada');
@@ -295,7 +295,21 @@ export class StudyRoomsService {
     }
 
     reservation.estado = ReservationStatus.CANCELADA;
-    return this.reservationRepository.save(reservation);
+    const savedReservation = await this.reservationRepository.save(reservation);
+
+    // ✅ Notificar cancelación (HU-12)
+    const user = reservation.estudiante?.user || reservation.docente?.user;
+    if (user?.correoInstitucional) {
+      this.notificationsService.sendReservationCancellation(
+        user.correoInstitucional,
+        user.nombreCompleto,
+        reservation.sala.nombre,
+        reservation.fechaReserva,
+        reservation.horaInicio,
+      ).catch(e => console.error('Error enviando correo de cancelación:', e));
+    }
+
+    return savedReservation;
   }
 
   async adminCancelReservation(id: number): Promise<Reservation> {
@@ -317,7 +331,21 @@ export class StudyRoomsService {
     }
 
     reservation.estado = ReservationStatus.CANCELADA;
-    return this.reservationRepository.save(reservation);
+    const savedReservation = await this.reservationRepository.save(reservation);
+
+    // ✅ Notificar cancelación (HU-12)
+    const user = reservation.estudiante?.user || reservation.docente?.user;
+    if (user?.correoInstitucional) {
+      this.notificationsService.sendReservationCancellation(
+        user.correoInstitucional,
+        user.nombreCompleto,
+        reservation.sala.nombre,
+        reservation.fechaReserva,
+        reservation.horaInicio,
+      ).catch(e => console.error('Error enviando correo de cancelación:', e));
+    }
+
+    return savedReservation;
   }
 
   async adminDeleteReservation(id: number): Promise<void> {
