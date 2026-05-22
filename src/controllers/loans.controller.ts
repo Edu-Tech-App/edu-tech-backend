@@ -16,10 +16,23 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 export class LoansController {
   constructor(private readonly loansService: LoansService) {}
 
+  @Get('user/:userId')
+  @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  findByUser(@Param('userId') userId: string) {
+    return this.loansService.findByUser(+userId);
+  }
+
   @Get('fines/pending/:userId')
   @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO)
   findPendingFines(@Param('userId') userId: number) {
     return this.loansService.findPendingFinesByUser(userId);
+  }
+
+  // ✅ Nuevo endpoint para todas las multas
+  @Get('fines/all')
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  findAllFines() {
+    return this.loansService.findAllFines();
   }
 
   @Post()

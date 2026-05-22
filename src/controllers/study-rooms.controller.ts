@@ -18,6 +18,13 @@ import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 export class StudyRoomsController {
   constructor(private readonly studyRoomsService: StudyRoomsService) {}
 
+  @Get()
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO, UserRole.ESTUDIANTE, UserRole.DOCENTE)
+  @ApiOperation({ summary: 'Obtener todas las salas de estudio' })
+  findAllRooms() {
+    return this.studyRoomsService.findAllRooms();
+  }
+
   @Post()
   @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
   @ApiOperation({ summary: 'Crear una nueva sala de estudio' })
@@ -27,13 +34,6 @@ export class StudyRoomsController {
       createRoomDto.capacidad,
       createRoomDto.ubicacion,
     );
-  }
-
-  @Get()
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO, UserRole.ESTUDIANTE, UserRole.DOCENTE)
-  @ApiOperation({ summary: 'Listar salas de estudio' })
-  findAllRooms() {
-    return this.studyRoomsService.findAllRooms();
   }
 
   @Put(':id')

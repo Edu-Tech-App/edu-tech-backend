@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsInt, Min, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, Min, IsEnum, IsOptional, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { BookCategory } from '../../entities/book.entity';
 
@@ -25,12 +25,14 @@ export class CreateSubjectDto {
   @ApiProperty({ example: 4, description: 'Semestre al que pertenece la asignatura' })
   @IsInt()
   @Min(1)
+  @Max(10)
   @IsNotEmpty()
   semestre: number;
 
   @ApiProperty({ example: 3, description: 'Cantidad de créditos académicos' })
   @IsInt()
   @Min(1)
+  @Max(5)
   @IsNotEmpty()
   creditos: number;
 
