@@ -4,10 +4,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
 import express from 'express';
+import { RateLimitGuard } from './auth/guards/rate-limit.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = Number(process.env.PORT ?? 3000);
+  const isDevelopment = process.env.NODE_ENV !== 'production';
 
   // Habilitar CORS para que el frontend pueda conectarse
   app.enableCors();
@@ -32,6 +34,10 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  if (isDevelopment) {
+    app.get(RateLimitGuard).resetAll();
+  }
 
   await app.listen(port);
 

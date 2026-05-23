@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Req } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/auth/login.dto';
 import { Public } from '../auth/decorators/public.decorator';
@@ -16,9 +16,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Public()
   @RateLimit()
-  @UseGuards(RateLimitGuard)
   async login(@Body() loginDto: LoginDto, @Req() req: any) {
-    const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+    const clientIp = this.rateLimitGuard.getClientKeyFromRequest(req);
     try {
       const result = await this.authService.login(loginDto);
       this.rateLimitGuard.recordSuccessfulAttempt(clientIp);

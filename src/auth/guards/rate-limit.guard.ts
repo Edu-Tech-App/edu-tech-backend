@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus } from '@nestjs/common';
+import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 interface RateLimitEntry {
@@ -10,85 +10,133 @@ interface RateLimitEntry {
 @Injectable()
 export class RateLimitGuard implements CanActivate {
   private static readonly rateLimitMap = new Map<string, RateLimitEntry>();
-  private readonly MAX_ATTEMPTS = 5;
-  private readonly BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutos
+  private readonly isDevelopment = process.env.NODE_ENV !== 'production';
+  private readonly MAX_ATTEMPTS = this.isDevelopment ? 10 : 5;
+  private readonly ATTEMPT_WINDOW_MS = this.isDevelopment ? 60 * 1000 : 15 * 60 * 1000;
+  private readonly BLOCK_DURATION_MS = this.isDevelopment ? 60 * 1000 : 15 * 60 * 1000;
 
-  constructor(private reflector: Reflector) {
-    console.log('RateLimitGuard: instanciado');
-  }
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    console.log('RateLimitGuard: canActivate iniciado');
     const isRateLimited = this.reflector.getAllAndOverride<boolean>('rateLimit', [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    console.log('RateLimitGuard: isRateLimited =', isRateLimited);
-
     if (!isRateLimited) {
       return true;
     }
 
+    if (this.isDevelopment) {
+      this.cleanupExpiredEntries();
+    }
+
     const request = context.switchToHttp().getRequest();
-    const clientIp = request.ip || request.connection?.remoteAddress || 'unknown';
-    console.log('RateLimitGuard: clientIp =', clientIp);
+    const clientKey = this.getClientKey(request);
+    const entry = RateLimitGuard.rateLimitMap.get(clientKey);
 
-    const entry = RateLimitGuard.rateLimitMap.get(clientIp);
-    console.log('RateLimitGuard: entry =', entry);
+    if (!entry) {
+      return true;
+    }
 
-    // Si está bloqueado
-    if (entry?.blockedUntil && Date.now() < entry.blockedUntil) {
-      const remainingTime = Math.ceil((entry.blockedUntil - Date.now()) / 1000 / 60);
-      console.log(`RateLimitGuard: IP bloqueada. Intentos fallidos: ${entry.count}. Bloqueado hasta: ${entry.blockedUntil}`);
+    const now = Date.now();
+
+    if (entry.blockedUntil && now < entry.blockedUntil) {
+      const remainingMinutes = Math.max(1, Math.ceil((entry.blockedUntil - now) / 1000 / 60));
       throw new HttpException(
-        `Demasiados intentos fallidos. Intenta de nuevo en ${remainingTime} minutos`,
+        `Demasiados intentos fallidos. Intenta de nuevo en ${remainingMinutes} minuto(s)`,
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
-    // Limpiar bloqueo expirado
-    if (entry?.blockedUntil && Date.now() >= entry.blockedUntil) {
-      console.log('RateLimitGuard: bloqueo expirado, limpiando entrada de IP');
-      RateLimitGuard.rateLimitMap.delete(clientIp);
+    if (entry.blockedUntil && now >= entry.blockedUntil) {
+      RateLimitGuard.rateLimitMap.delete(clientKey);
+      return true;
+    }
+
+    if (now - entry.firstAttempt >= this.ATTEMPT_WINDOW_MS) {
+      RateLimitGuard.rateLimitMap.delete(clientKey);
     }
 
     return true;
   }
 
-  // Método para registrar intento fallido
-  recordFailedAttempt(clientIp: string): void {
-    console.log('RateLimitGuard: recordFailedAttempt para IP =', clientIp);
-    const entry = RateLimitGuard.rateLimitMap.get(clientIp) || {
-      count: 0,
-      firstAttempt: Date.now(),
-      blockedUntil: null,
-    };
+  recordFailedAttempt(clientKey: string): void {
+    const now = Date.now();
+    const current = RateLimitGuard.rateLimitMap.get(clientKey);
 
-    entry.count++;
-    console.log(`RateLimitGuard: Incrementando intentos de IP ${clientIp} a ${entry.count}`);
+    if (!current || now - current.firstAttempt >= this.ATTEMPT_WINDOW_MS || (current.blockedUntil && now >= current.blockedUntil)) {
+      const nextEntry: RateLimitEntry = {
+        count: 1,
+        firstAttempt: now,
+        blockedUntil: null,
+      };
 
-    if (entry.count >= this.MAX_ATTEMPTS) {
-      entry.blockedUntil = Date.now() + this.BLOCK_DURATION_MS;
-      console.log(`RateLimitGuard: IP ${clientIp} bloqueada por 30 minutos (hasta ${entry.blockedUntil})`);
+      if (nextEntry.count >= this.MAX_ATTEMPTS) {
+        nextEntry.blockedUntil = now + this.BLOCK_DURATION_MS;
+      }
+
+      RateLimitGuard.rateLimitMap.set(clientKey, nextEntry);
+      return;
     }
 
-    RateLimitGuard.rateLimitMap.set(clientIp, entry);
+    current.count += 1;
+
+    if (current.count >= this.MAX_ATTEMPTS) {
+      current.blockedUntil = now + this.BLOCK_DURATION_MS;
+    }
+
+    RateLimitGuard.rateLimitMap.set(clientKey, current);
   }
 
-  // Método para registrar intento exitoso
-  recordSuccessfulAttempt(clientIp: string): void {
-    RateLimitGuard.rateLimitMap.delete(clientIp);
+  recordSuccessfulAttempt(clientKey: string): void {
+    RateLimitGuard.rateLimitMap.delete(clientKey);
   }
 
-  // Limpiar entradas antiguas cada 5 minutos
-  cleanup(): void {
+  resetClient(clientKey: string): void {
+    RateLimitGuard.rateLimitMap.delete(clientKey);
+  }
+
+  resetAll(): void {
+    RateLimitGuard.rateLimitMap.clear();
+  }
+
+  getClientKeyFromRequest(request: {
+    headers?: Record<string, string | string[] | undefined>;
+    ip?: string;
+    connection?: { remoteAddress?: string };
+    socket?: { remoteAddress?: string };
+  }): string {
+    return this.getClientKey(request);
+  }
+
+  private getClientKey(request: {
+    headers?: Record<string, string | string[] | undefined>;
+    ip?: string;
+    connection?: { remoteAddress?: string };
+    socket?: { remoteAddress?: string };
+  }): string {
+    const forwardedFor = request.headers?.['x-forwarded-for'];
+    const forwardedIp = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor?.split(',')[0]?.trim();
+
+    return (
+      forwardedIp ||
+      request.ip ||
+      request.socket?.remoteAddress ||
+      request.connection?.remoteAddress ||
+      'unknown'
+    );
+  }
+
+  private cleanupExpiredEntries(): void {
     const now = Date.now();
-    for (const [ip, entry] of RateLimitGuard.rateLimitMap.entries()) {
-      if (entry.blockedUntil && now > entry.blockedUntil) {
-        RateLimitGuard.rateLimitMap.delete(ip);
-      } else if (!entry.blockedUntil && now - entry.firstAttempt > this.BLOCK_DURATION_MS) {
-        RateLimitGuard.rateLimitMap.delete(ip);
+
+    for (const [key, entry] of RateLimitGuard.rateLimitMap.entries()) {
+      const blockExpired = entry.blockedUntil && now >= entry.blockedUntil;
+      const windowExpired = now - entry.firstAttempt >= this.ATTEMPT_WINDOW_MS;
+
+      if (blockExpired || windowExpired) {
+        RateLimitGuard.rateLimitMap.delete(key);
       }
     }
   }
