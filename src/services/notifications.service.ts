@@ -35,14 +35,20 @@ export class NotificationsService implements OnModuleInit {
     private reservationRepository: Repository<Reservation>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) { }
+  ) {}
 
   async onModuleInit() {
-    this.logger.log('Iniciando limpieza de reservas al arrancar el servidor...');
+    this.logger.log(
+      'Iniciando limpieza de reservas al arrancar el servidor...',
+    );
     await this.updateReservationStatuses();
   }
 
-  private getTemplate(title: string, content: string, headerClass = ''): string {
+  private getTemplate(
+    title: string,
+    content: string,
+    headerClass = '',
+  ): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -67,17 +73,21 @@ export class NotificationsService implements OnModuleInit {
   @Cron(CronExpression.EVERY_5_MINUTES)
   async updateReservationStatuses() {
     this.logger.log('Revisando reservas finalizadas para actualizar estado...');
-    
+
     const ahora = new Date();
     const hoy = ahora.toISOString().split('T')[0];
-    const horaActual = ahora.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const horaActual = ahora.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
     // Buscar reservas activas que ya terminaron (de hoy o de días pasados)
-    const pastReservations = await this.reservationRepository.createQueryBuilder('reserva')
+    const pastReservations = await this.reservationRepository
+      .createQueryBuilder('reserva')
       .where('reserva.estado = :estado', { estado: ReservationStatus.ACTIVA })
       .andWhere(
         '(CAST(reserva.fecha_reserva AS CHAR) < :hoy OR (CAST(reserva.fecha_reserva AS CHAR) = :hoy AND reserva.hora_fin <= :horaActual))',
-        { hoy, horaActual }
+        { hoy, horaActual },
       )
       .getMany();
 
@@ -86,7 +96,9 @@ export class NotificationsService implements OnModuleInit {
         res.estado = ReservationStatus.COMPLETADA;
         await this.reservationRepository.save(res);
       }
-      this.logger.log(`${pastReservations.length} reservas marcadas como COMPLETADAS.`);
+      this.logger.log(
+        `${pastReservations.length} reservas marcadas como COMPLETADAS.`,
+      );
     }
   }
 
@@ -98,7 +110,8 @@ export class NotificationsService implements OnModuleInit {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const expiringLoans = await this.loanRepository.createQueryBuilder('loan')
+    const expiringLoans = await this.loanRepository
+      .createQueryBuilder('loan')
       .innerJoinAndSelect('loan.estudiante', 'estudiante')
       .innerJoinAndSelect('estudiante.user', 'user')
       .innerJoinAndSelect('loan.libro', 'libro')
@@ -117,12 +130,23 @@ export class NotificationsService implements OnModuleInit {
           </div>
           <p>Por favor, acércate a la biblioteca para devolverlo y evitar multas por retraso.</p>
         `;
-        await this.sendEmail(loan.estudiante.user.correoInstitucional, 'Recordatorio de Devolución', content);
+        await this.sendEmail(
+          loan.estudiante.user.correoInstitucional,
+          'Recordatorio de Devolución',
+          content,
+        );
       }
     }
   }
 
-  async sendReservationConfirmation(email: string, userName: string, roomName: string, date: Date, startTime: string, endTime: string) {
+  async sendReservationConfirmation(
+    email: string,
+    userName: string,
+    roomName: string,
+    date: Date,
+    startTime: string,
+    endTime: string,
+  ) {
     const content = `
       <h2>Hola, ${userName}</h2>
       <p>Tu reserva de espacio ha sido confirmada con éxito. Aquí están los detalles:</p>
@@ -133,10 +157,21 @@ export class NotificationsService implements OnModuleInit {
       </div>
       <p>Te recomendamos llegar 5 minutos antes. ¡Que tengas una productiva jornada de estudio!</p>
     `;
-    await this.sendEmail(email, 'Confirmación de Reserva de Sala', content, 'success');
+    await this.sendEmail(
+      email,
+      'Confirmación de Reserva de Sala',
+      content,
+      'success',
+    );
   }
 
-  async sendReservationCancellation(email: string, userName: string, roomName: string, date: Date, startTime: string) {
+  async sendReservationCancellation(
+    email: string,
+    userName: string,
+    roomName: string,
+    date: Date,
+    startTime: string,
+  ) {
     const content = `
       <h2>Hola, ${userName}</h2>
       <p>Te informamos que tu reserva de sala ha sido <strong>CANCELADA</strong>:</p>
@@ -147,10 +182,21 @@ export class NotificationsService implements OnModuleInit {
       </div>
       <p>Si no realizaste esta acción, por favor contacta con el administrador de la biblioteca.</p>
     `;
-    await this.sendEmail(email, 'Notificación de Cancelación de Reserva', content, 'error');
+    await this.sendEmail(
+      email,
+      'Notificación de Cancelación de Reserva',
+      content,
+      'error',
+    );
   }
 
-  async sendGradeNotification(email: string, studentName: string, subjectName: string, grade: number, isUpdate = false) {
+  async sendGradeNotification(
+    email: string,
+    studentName: string,
+    subjectName: string,
+    grade: number,
+    isUpdate = false,
+  ) {
     const action = isUpdate ? 'actualizada' : 'registrada';
     const content = `
       <h2>Hola, ${studentName}</h2>
@@ -164,7 +210,12 @@ export class NotificationsService implements OnModuleInit {
     await this.sendEmail(email, `Nueva Calificación: ${subjectName}`, content);
   }
 
-  async sendLoanConfirmation(email: string, studentName: string, bookTitle: string, dueDate: Date) {
+  async sendLoanConfirmation(
+    email: string,
+    studentName: string,
+    bookTitle: string,
+    dueDate: Date,
+  ) {
     const content = `
       <h2>Hola, ${studentName}</h2>
       <p>Se ha registrado el préstamo del siguiente material bibliográfico:</p>
@@ -177,7 +228,13 @@ export class NotificationsService implements OnModuleInit {
     await this.sendEmail(email, 'Confirmación de Préstamo', content);
   }
 
-  async sendFineNotification(email: string, studentName: string, bookTitle: string, fineAmount: number, daysLate: number) {
+  async sendFineNotification(
+    email: string,
+    studentName: string,
+    bookTitle: string,
+    fineAmount: number,
+    daysLate: number,
+  ) {
     const content = `
       <h2>Hola, ${studentName}</h2>
       <p>Se ha generado una multa debido a la devolución tardía de un material:</p>
@@ -191,7 +248,12 @@ export class NotificationsService implements OnModuleInit {
     await this.sendEmail(email, 'Notificación de Multa', content, 'error');
   }
 
-  async sendPaymentConfirmation(email: string, userName: string, amount: number, concept: string) {
+  async sendPaymentConfirmation(
+    email: string,
+    userName: string,
+    amount: number,
+    concept: string,
+  ) {
     const content = `
       <h2>Hola, ${userName}</h2>
       <p>Hemos recibido tu pago correctamente. Aquí tienes el comprobante digital:</p>
@@ -202,7 +264,12 @@ export class NotificationsService implements OnModuleInit {
       </div>
       <p>Tu cuenta ha sido actualizada. ¡Gracias por estar al día!</p>
     `;
-    await this.sendEmail(email, 'Comprobante de Pago Recibido', content, 'success');
+    await this.sendEmail(
+      email,
+      'Comprobante de Pago Recibido',
+      content,
+      'success',
+    );
   }
 
   async sendWelcomeEmail(email: string, userName: string) {
@@ -217,7 +284,12 @@ export class NotificationsService implements OnModuleInit {
     await this.sendEmail(email, 'Bienvenido a Edu-Tech', content, 'success');
   }
 
-  private async sendEmail(to: string, title: string, content: string, headerClass = '') {
+  private async sendEmail(
+    to: string,
+    title: string,
+    content: string,
+    headerClass = '',
+  ) {
     try {
       await this.mailerService.sendMail({
         to,
