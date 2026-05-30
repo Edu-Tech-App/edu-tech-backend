@@ -5,6 +5,9 @@ import { Subject } from '../entities/subject.entity';
 import { CreateSubjectDto } from '../dto/subjects/create-subject.dto';
 import { UpdateSubjectDto } from '../dto/subjects/update-subject.dto';
 import { Teacher } from '../entities/teacher.entity';
+import { Student } from '../entities/student.entity';
+import { User, UserRole } from '../entities/user.entity';
+import { SubjectEnrollment } from '../entities/subject-enrollment.entity';
 
 @Injectable()
 export class SubjectsService {
@@ -13,6 +16,12 @@ export class SubjectsService {
     private readonly subjectRepository: Repository<Subject>,
     @InjectRepository(Teacher)
     private readonly teacherRepository: Repository<Teacher>,
+    @InjectRepository(Student)
+    private readonly studentRepository: Repository<Student>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(SubjectEnrollment)
+    private readonly enrollmentRepository: Repository<SubjectEnrollment>,
   ) {}
 
   private getCareerPrefix(carrera: string) {
@@ -48,6 +57,29 @@ export class SubjectsService {
     }, 0);
 
     return `${prefix}-${String(maxSequence + 1).padStart(3, '0')}`;
+  }
+
+  private async ensureStudentProfile(estudianteId: number): Promise<Student> {
+    let student = await this.studentRepository.findOneBy({ usuarioId: estudianteId });
+
+    if (student) {
+      return student;
+    }
+
+    const user = await this.userRepository.findOneBy({ id: estudianteId });
+
+    if (!user || user.rol !== UserRole.ESTUDIANTE) {
+      throw new BadRequestException('El usuario indicado no existe o no tiene rol de estudiante');
+    }
+
+    student = this.studentRepository.create({
+      usuarioId: user.id,
+      codigoEstudiantil: `EST-${user.id}`,
+      carrera: 'Por definir',
+      semestreActual: 1,
+    });
+
+    return this.studentRepository.save(student);
   }
 
   async create(createSubjectDto: CreateSubjectDto): Promise<Subject> {
@@ -106,5 +138,59 @@ export class SubjectsService {
   async remove(id: number): Promise<void> {
     const subject = await this.findOne(id);
     await this.subjectRepository.remove(subject);
+  }
+
+  async enrollStudent(asignaturaId: number, estudianteId: number): Promise<SubjectEnrollment> {
+    await this.findOne(asignaturaId);
+    await this.ensureStudentProfile(estudianteId);
+
+    const existingEnrollment = await this.enrollmentRepository.findOneBy({
+      asignaturaId,
+      estudianteId,
+    });
+
+    if (existingEnrollment) {
+      throw new BadRequestException('El estudiante ya esta inscrito en esta materia');
+    }
+
+    const enrollment = this.enrollmentRepository.create({
+      asignaturaId,
+      estudianteId,
+    });
+
+    return this.enrollmentRepository.save(enrollment);
+  }
+
+  async findEnrollmentsBySubject(asignaturaId: number): Promise<SubjectEnrollment[]> {
+    await this.findOne(asignaturaId);
+
+    return this.enrollmentRepository.find({
+      where: { asignaturaId },
+      relations: ['estudiante', 'estudiante.user', 'asignatura'],
+      order: { fechaInscripcion: 'DESC' },
+    });
+  }
+
+  async findEnrollmentsByStudent(estudianteId: number): Promise<SubjectEnrollment[]> {
+    await this.ensureStudentProfile(estudianteId);
+
+    return this.enrollmentRepository.find({
+      where: { estudianteId },
+      relations: ['asignatura', 'asignatura.docente', 'asignatura.docente.user'],
+      order: { fechaInscripcion: 'DESC' },
+    });
+  }
+
+  async removeEnrollment(asignaturaId: number, estudianteId: number): Promise<void> {
+    const enrollment = await this.enrollmentRepository.findOneBy({
+      asignaturaId,
+      estudianteId,
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('No existe una inscripcion para ese estudiante y materia');
+    }
+
+    await this.enrollmentRepository.remove(enrollment);
   }
 }

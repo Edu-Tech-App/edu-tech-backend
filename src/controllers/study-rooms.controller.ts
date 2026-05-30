@@ -9,7 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
-import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('study-rooms')
 @ApiBearerAuth()
@@ -53,6 +53,33 @@ export class StudyRoomsController {
   @Post('reservations')
   @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE)
   @ApiOperation({ summary: 'Crear una reserva de sala' })
+  @ApiBody({
+    type: CreateReservationDto,
+    examples: {
+      estudiante: {
+        summary: 'Reserva hecha por estudiante',
+        value: {
+          salaId: 1,
+          userId: 1,
+          isEstudiante: true,
+          fechaReserva: '2026-06-15',
+          horaInicio: '08:00',
+          horaFin: '10:00',
+        },
+      },
+      docente: {
+        summary: 'Reserva hecha por docente',
+        value: {
+          salaId: 1,
+          userId: 2,
+          isEstudiante: false,
+          fechaReserva: '2026-06-15',
+          horaInicio: '14:00',
+          horaFin: '16:00',
+        },
+      },
+    },
+  })
   createReservation(@Body() createReservationDto: CreateReservationDto) {
     return this.studyRoomsService.createReservation(
       createReservationDto.salaId,

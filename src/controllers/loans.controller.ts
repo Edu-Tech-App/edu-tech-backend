@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, UseGuards, Query } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Put, Delete } from '@nestjs/common';
 import { LoansService } from '../services/loans.service';
 import { CreateLoanDto } from '../dto/loans/create-loan.dto';
@@ -8,7 +8,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 import { LoanStatus } from '../entities/loan.entity';
-import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('loans')
 @ApiBearerAuth()
@@ -17,15 +17,26 @@ import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
 export class LoansController {
   constructor(private readonly loansService: LoansService) {}
 
+  private assertOwnLoanResource(userIdParam: number, req: any) {
+    const userRol = req.user.rol;
+    const userId = req.user.userId || req.user.id;
+
+    if ([UserRole.ESTUDIANTE, UserRole.DOCENTE].includes(userRol) && userIdParam !== userId) {
+      throw new ForbiddenException('Solo puedes consultar prestamos y multas de tu propio usuario');
+    }
+  }
+
   @Get('user/:userId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
-  findByUser(@Param('userId') userId: string) {
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  findByUser(@Param('userId') userId: string, @Req() req: any) {
+    this.assertOwnLoanResource(+userId, req);
     return this.loansService.findByUser(+userId);
   }
 
   @Get('fines/pending/:userId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO)
-  findPendingFines(@Param('userId') userId: number) {
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.BIBLIOTECARIO)
+  findPendingFines(@Param('userId') userId: number, @Req() req: any) {
+    this.assertOwnLoanResource(+userId, req);
     return this.loansService.findPendingFinesByUser(userId);
   }
 
@@ -43,8 +54,37 @@ export class LoansController {
   }
 
   @Post()
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
-  create(@Body() createLoanDto: CreateLoanDto) {
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @ApiOperation({ summary: 'Solicitar o registrar un prestamo de libro' })
+  @ApiBody({
+    type: CreateLoanDto,
+    examples: {
+      estudiante: {
+        summary: 'Solicitud de estudiante',
+        value: {
+          libroId: 1,
+          estudianteId: 1,
+          fechaLimiteDevolucion: '2026-06-15',
+        },
+      },
+      docente: {
+        summary: 'Solicitud de docente',
+        value: {
+          libroId: 1,
+          estudianteId: 2,
+          fechaLimiteDevolucion: '2026-06-15',
+        },
+      },
+    },
+  })
+  create(@Body() createLoanDto: CreateLoanDto, @Req() req: any) {
+    const userRol = req.user.rol;
+    const userId = req.user.userId || req.user.id;
+
+    if ([UserRole.ESTUDIANTE, UserRole.DOCENTE].includes(userRol) && createLoanDto.estudianteId !== userId) {
+      throw new ForbiddenException('Solo puedes solicitar prestamos para tu propio usuario');
+    }
+
     return this.loansService.create(createLoanDto);
   }
 
@@ -55,16 +95,18 @@ export class LoansController {
   }
 
   @Get('student/:userId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
   @ApiQuery({ name: 'status', required: false, enum: LoanStatus })
   @ApiQuery({ name: 'startDate', required: false, type: String, description: 'YYYY-MM-DD' })
   @ApiQuery({ name: 'endDate', required: false, type: String, description: 'YYYY-MM-DD' })
   findByStudent(
     @Param('userId') userId: string,
+    @Req() req: any,
     @Query('status') status?: LoanStatus,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
+    this.assertOwnLoanResource(+userId, req);
     return this.loansService.findByStudent(+userId, status, startDate, endDate);
   }
 
@@ -87,7 +129,7 @@ export class LoansController {
   }
 
   @Post('fines/:id/pay')
-  @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   payFine(@Param('id') id: string) {
     return this.loansService.payFine(+id);
   }
