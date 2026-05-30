@@ -8,6 +8,8 @@ import { Teacher } from '../entities/teacher.entity';
 import { Student } from '../entities/student.entity';
 import { User, UserRole } from '../entities/user.entity';
 import { SubjectEnrollment } from '../entities/subject-enrollment.entity';
+import { SubjectTask } from '../entities/subject-task.entity';
+import { SubjectTaskSubmission } from '../entities/subject-task-submission.entity';
 
 @Injectable()
 export class SubjectsService {
@@ -22,6 +24,10 @@ export class SubjectsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(SubjectEnrollment)
     private readonly enrollmentRepository: Repository<SubjectEnrollment>,
+    @InjectRepository(SubjectTask)
+    private readonly subjectTaskRepository: Repository<SubjectTask>,
+    @InjectRepository(SubjectTaskSubmission)
+    private readonly submissionRepository: Repository<SubjectTaskSubmission>,
   ) {}
 
   private getCareerPrefix(carrera: string) {
@@ -235,6 +241,107 @@ export class SubjectsService {
 
   async findStudentProfile(estudianteId: number): Promise<Student> {
     return this.ensureStudentProfile(estudianteId);
+  }
+
+  async createTask(asignaturaId: number, docenteId: number, titulo: string, descripcion: string, archivoUrl?: string | null) {
+    const subject = await this.findOne(asignaturaId);
+    const docente = await this.userRepository.findOneBy({ id: docenteId });
+
+    if (!docente || (docente.rol !== UserRole.DOCENTE && docente.rol !== UserRole.ADMINISTRATIVO)) {
+      throw new BadRequestException('No tienes permiso para crear tareas');
+    }
+
+    if (docente.rol === UserRole.DOCENTE && subject.docenteId !== docenteId) {
+      throw new BadRequestException('No eres el docente asignado a esta materia');
+    }
+
+    const task = this.subjectTaskRepository.create({
+      asignaturaId,
+      titulo,
+      descripcion,
+      archivoUrl: archivoUrl ?? null,
+      creadoPorId: docenteId,
+    });
+
+    return this.subjectTaskRepository.save(task);
+  }
+
+  async findTasksBySubject(asignaturaId: number, currentUserId: number, currentUserRole: UserRole) {
+    await this.findOne(asignaturaId);
+
+    const tasks = await this.subjectTaskRepository.find({
+      where: { asignaturaId },
+      relations: ['creadoPor'],
+      order: { creadoEn: 'DESC' },
+    });
+
+    if (currentUserRole === UserRole.ESTUDIANTE) {
+      const submissions = await this.submissionRepository.find({
+        where: { estudianteId: currentUserId },
+        relations: ['tarea'],
+      });
+
+      const submissionMap = new Map(submissions.map((submission) => [submission.tareaId, submission]));
+
+      return tasks.map((task) => ({
+        ...task,
+        miEntrega: submissionMap.get(task.id) ?? null,
+        estadoEntrega: submissionMap.has(task.id) ? 'ENTREGADA' : 'PENDIENTE',
+      }));
+    }
+
+    const enrollments = await this.enrollmentRepository.find({ where: { asignaturaId } });
+    const submissions = await this.submissionRepository.find({
+      where: tasks.map((task) => ({ tareaId: task.id })),
+    });
+
+    return tasks.map((task) => {
+      const deliveredCount = submissions.filter((submission) => submission.tareaId === task.id).length;
+      return {
+        ...task,
+        entregasRealizadas: deliveredCount,
+        entregasPendientes: Math.max(0, enrollments.length - deliveredCount),
+      };
+    });
+  }
+
+  async submitTask(taskId: number, estudianteId: number, mensaje?: string, archivoUrl?: string | null) {
+    const task = await this.subjectTaskRepository.findOneBy({ id: taskId });
+
+    if (!task) {
+      throw new NotFoundException('Tarea no encontrada');
+    }
+
+    await this.ensureStudentProfile(estudianteId);
+
+    const enrollment = await this.enrollmentRepository.findOneBy({
+      asignaturaId: task.asignaturaId,
+      estudianteId,
+    });
+
+    if (!enrollment) {
+      throw new BadRequestException('No estás inscrito en esta materia');
+    }
+
+    const existingSubmission = await this.submissionRepository.findOneBy({
+      tareaId: taskId,
+      estudianteId,
+    });
+
+    if (existingSubmission) {
+      existingSubmission.mensaje = mensaje ?? existingSubmission.mensaje;
+      existingSubmission.archivoUrl = archivoUrl ?? existingSubmission.archivoUrl;
+      return this.submissionRepository.save(existingSubmission);
+    }
+
+    const submission = this.submissionRepository.create({
+      tareaId: taskId,
+      estudianteId,
+      mensaje: mensaje ?? null,
+      archivoUrl: archivoUrl ?? null,
+    });
+
+    return this.submissionRepository.save(submission);
   }
 
   async removeEnrollment(asignaturaId: number, estudianteId: number): Promise<void> {
