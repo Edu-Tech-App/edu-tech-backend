@@ -3,7 +3,6 @@ import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 export enum StudyRoomStatus {
   ACTIVA = 'ACTIVA',
   INACTIVA = 'INACTIVA',
-  MANTENIMIENTO = 'MANTENIMIENTO',
 }
 
 @Entity('salas_estudio')
