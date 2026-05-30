@@ -92,14 +92,14 @@ export class StudyRoomsController {
   }
 
   @Get('reservations')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   @ApiOperation({ summary: 'Listar todas las reservas de salas' })
   findAllReservations() {
     return this.studyRoomsService.findAllReservations();
   }
 
   @Get('reservations/user/:userId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   @ApiOperation({ summary: 'Listar reservas de salas por usuario' })
   findReservationsByUser(@Param('userId', ParseIntPipe) userId: number) {
     return this.studyRoomsService.findReservationsByUser(userId);

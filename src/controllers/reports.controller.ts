@@ -7,14 +7,22 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 import { ReportsService } from '../services/reports.service';
-import { ReportFilterDto, ReportFormat } from '../dto/reports/report-filter.dto';
+import {
+  ReportFilterDto,
+  ReportFormat,
+} from '../dto/reports/report-filter.dto';
 
 @ApiTags('Reportes')
 @Controller('reportes')
@@ -27,14 +35,22 @@ export class ReportsController {
    * Generar reporte de calificaciones
    */
   @Get('calificaciones')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
   @ApiOperation({
     summary: 'Generar reporte de calificaciones',
     description:
       'Genera un reporte de calificaciones por asignatura y período en formato PDF o Excel',
   })
-  @ApiQuery({ name: 'startDate', type: String, description: 'Fecha de inicio (YYYY-MM-DD)' })
-  @ApiQuery({ name: 'endDate', type: String, description: 'Fecha de fin (YYYY-MM-DD)' })
+  @ApiQuery({
+    name: 'startDate',
+    type: String,
+    description: 'Fecha de inicio (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: String,
+    description: 'Fecha de fin (YYYY-MM-DD)',
+  })
   @ApiQuery({
     name: 'format',
     type: String,
@@ -48,7 +64,18 @@ export class ReportsController {
     required: false,
     description: 'Período académico (ej: 2024-I)',
   })
-  @ApiQuery({ name: 'asignaturaId', type: Number, required: false, description: 'ID de la asignatura' })
+  @ApiQuery({
+    name: 'asignaturaId',
+    type: Number,
+    required: false,
+    description: 'ID de la asignatura',
+  })
+  @ApiQuery({
+    name: 'estudianteId',
+    type: Number,
+    required: false,
+    description: 'ID del estudiante a filtrar',
+  })
   async generateGradesReport(
     @Query() query: any,
     @Res() res: Response,
@@ -58,24 +85,39 @@ export class ReportsController {
       const filterDto: ReportFilterDto = {
         startDate: query.startDate,
         endDate: query.endDate,
-        format: query.format === 'excel' ? ReportFormat.EXCEL : ReportFormat.PDF,
+        format:
+          query.format === 'excel' ? ReportFormat.EXCEL : ReportFormat.PDF,
         periodoAcademico: query.periodoAcademico,
-        asignaturaId: query.asignaturaId ? parseInt(query.asignaturaId) : undefined,
+        asignaturaId: query.asignaturaId
+          ? parseInt(query.asignaturaId)
+          : undefined,
+        estudianteId: query.estudianteId ? parseInt(query.estudianteId) : undefined,
       };
 
-      const buffer = await this.reportsService.generateGradesReport(filterDto, req.user.id);
+      const buffer = await this.reportsService.generateGradesReport(
+        filterDto,
+        req.user.id,
+      );
 
       const fileName = `reporte-calificaciones-${new Date().getTime()}.${
         filterDto.format === ReportFormat.EXCEL ? 'xlsx' : 'pdf'
       }`;
       const mimeType =
-        filterDto.format === ReportFormat.EXCEL ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/pdf';
+        filterDto.format === ReportFormat.EXCEL
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/pdf';
 
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${fileName}"`,
+      );
       res.setHeader('Content-Type', mimeType);
       res.send(buffer);
     } catch (error) {
-      console.error('[ReportsController] Error en /reportes/calificaciones:', error);
+      console.error(
+        '[ReportsController] Error en /reportes/calificaciones:',
+        error,
+      );
       res.status(400).json({
         success: false,
         message: error.message || 'Error generando el reporte',
@@ -93,14 +135,28 @@ export class ReportsController {
     description:
       'Genera un reporte de préstamos, devoluciones y multas por período en formato PDF o Excel',
   })
-  @ApiQuery({ name: 'startDate', type: String, description: 'Fecha de inicio (YYYY-MM-DD)' })
-  @ApiQuery({ name: 'endDate', type: String, description: 'Fecha de fin (YYYY-MM-DD)' })
+  @ApiQuery({
+    name: 'startDate',
+    type: String,
+    description: 'Fecha de inicio (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: String,
+    description: 'Fecha de fin (YYYY-MM-DD)',
+  })
   @ApiQuery({
     name: 'format',
     type: String,
     enum: ['pdf', 'excel'],
     required: false,
     description: 'Formato del reporte (pdf o excel)',
+  })
+  @ApiQuery({
+    name: 'estudianteId',
+    type: Number,
+    required: false,
+    description: 'ID del estudiante a filtrar',
   })
   async generateLoansReport(
     @Query() query: any,
@@ -111,18 +167,28 @@ export class ReportsController {
       const filterDto: ReportFilterDto = {
         startDate: query.startDate,
         endDate: query.endDate,
-        format: query.format === 'excel' ? ReportFormat.EXCEL : ReportFormat.PDF,
+        format:
+          query.format === 'excel' ? ReportFormat.EXCEL : ReportFormat.PDF,
+        estudianteId: query.estudianteId ? parseInt(query.estudianteId) : undefined,
       };
 
-      const buffer = await this.reportsService.generateLoansReport(filterDto, req.user.id);
+      const buffer = await this.reportsService.generateLoansReport(
+        filterDto,
+        req.user.id,
+      );
 
       const fileName = `reporte-prestamos-${new Date().getTime()}.${
         filterDto.format === ReportFormat.EXCEL ? 'xlsx' : 'pdf'
       }`;
       const mimeType =
-        filterDto.format === ReportFormat.EXCEL ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/pdf';
+        filterDto.format === ReportFormat.EXCEL
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/pdf';
 
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${fileName}"`,
+      );
       res.setHeader('Content-Type', mimeType);
       res.send(buffer);
     } catch (error) {

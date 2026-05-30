@@ -38,14 +38,20 @@ export class SubjectsController {
   }
 
   @Post()
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.ADMINISTRATIVO)
   create(@Body() createSubjectDto: CreateSubjectDto) {
     return this.subjectsService.create(createSubjectDto);
   }
 
   @Get()
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.DOCENTE, UserRole.ESTUDIANTE)
-  findAll() {
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.DOCENTE, UserRole.ESTUDIANTE)
+  findAll(@Req() req: any) {
+    const userRol = req.user.rol;
+    const userId = req.user.userId || req.user.id;
+
+    if (userRol === UserRole.ESTUDIANTE) {
+      return this.subjectsService.findForStudent(userId);
+    }
     return this.subjectsService.findAll();
   }
 
@@ -57,8 +63,16 @@ export class SubjectsController {
     return this.subjectsService.findEnrollmentsByStudent(userId);
   }
 
+  @Get('student/profile')
+  @Roles(UserRole.ESTUDIANTE)
+  @ApiOperation({ summary: 'Obtener perfil academico del estudiante autenticado' })
+  findMyStudentProfile(@Req() req: any) {
+    const userId = req.user.userId || req.user.id;
+    return this.subjectsService.findStudentProfile(userId);
+  }
+
   @Post(':id/enrollments')
-  @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO)
   @ApiOperation({ summary: 'Inscribir un estudiante en una materia' })
   @ApiBody({
     type: EnrollSubjectDto,
@@ -87,14 +101,14 @@ export class SubjectsController {
   }
 
   @Get(':id/enrollments')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.DOCENTE)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.DOCENTE)
   @ApiOperation({ summary: 'Listar estudiantes inscritos en una materia' })
   findSubjectEnrollments(@Param('id', ParseIntPipe) id: number) {
     return this.subjectsService.findEnrollmentsBySubject(id);
   }
 
   @Delete(':id/enrollments/:studentId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO)
   @ApiOperation({ summary: 'Retirar la inscripcion de un estudiante en una materia' })
   removeEnrollment(
     @Param('id', ParseIntPipe) id: number,
@@ -111,7 +125,7 @@ export class SubjectsController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.ADMINISTRATIVO)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateSubjectDto: UpdateSubjectDto,
@@ -120,7 +134,7 @@ export class SubjectsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.ADMINISTRATIVO)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.subjectsService.remove(id);
   }

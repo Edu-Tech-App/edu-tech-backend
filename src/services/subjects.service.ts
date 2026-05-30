@@ -103,8 +103,53 @@ export class SubjectsService {
     return this.subjectRepository.save(subject);
   }
 
-  async findAll(): Promise<Subject[]> {
-    return this.subjectRepository.find({ relations: ['docente', 'docente.user'] });
+  async findAll(): Promise<any[]> {
+    const subjects = await this.subjectRepository.find({ relations: ['docente', 'docente.user'] });
+    const counts = await this.enrollmentRepository
+      .createQueryBuilder('enrollment')
+      .select('enrollment.asignaturaId', 'subjectId')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('enrollment.asignaturaId')
+      .getRawMany();
+
+    return subjects.map((s) => {
+      const countObj = counts.find((c) => Number(c.subjectId) === s.id);
+      return {
+        ...s,
+        inscritosCount: countObj ? Number(countObj.count) : 0,
+      };
+    });
+  }
+
+  async findForStudent(estudianteId: number): Promise<any[]> {
+    const student = await this.studentRepository.findOneBy({ usuarioId: estudianteId });
+
+    let subjects: Subject[];
+
+    // Si no tiene carrera o es 'Por definir', ve todas
+    if (!student || !student.carrera || student.carrera === 'Por definir') {
+      subjects = await this.subjectRepository.find({ relations: ['docente', 'docente.user'] });
+    } else {
+      subjects = await this.subjectRepository.find({
+        where: { carrera: student.carrera as any },
+        relations: ['docente', 'docente.user'],
+      });
+    }
+
+    const counts = await this.enrollmentRepository
+      .createQueryBuilder('enrollment')
+      .select('enrollment.asignaturaId', 'subjectId')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('enrollment.asignaturaId')
+      .getRawMany();
+
+    return subjects.map((s) => {
+      const countObj = counts.find((c) => Number(c.subjectId) === s.id);
+      return {
+        ...s,
+        inscritosCount: countObj ? Number(countObj.count) : 0,
+      };
+    });
   }
 
   async findOne(id: number): Promise<Subject> {
@@ -141,8 +186,15 @@ export class SubjectsService {
   }
 
   async enrollStudent(asignaturaId: number, estudianteId: number): Promise<SubjectEnrollment> {
-    await this.findOne(asignaturaId);
-    await this.ensureStudentProfile(estudianteId);
+    const subject = await this.findOne(asignaturaId);
+    const student = await this.ensureStudentProfile(estudianteId);
+
+    // Validación de carrera
+    if (student.carrera && student.carrera !== 'Por definir') {
+      if (subject.carrera !== student.carrera) {
+        throw new BadRequestException(`No puedes inscribirte a esta materia. Pertenece a ${subject.carrera} y tu carrera es ${student.carrera}`);
+      }
+    }
 
     const existingEnrollment = await this.enrollmentRepository.findOneBy({
       asignaturaId,
@@ -179,6 +231,10 @@ export class SubjectsService {
       relations: ['asignatura', 'asignatura.docente', 'asignatura.docente.user'],
       order: { fechaInscripcion: 'DESC' },
     });
+  }
+
+  async findStudentProfile(estudianteId: number): Promise<Student> {
+    return this.ensureStudentProfile(estudianteId);
   }
 
   async removeEnrollment(asignaturaId: number, estudianteId: number): Promise<void> {
