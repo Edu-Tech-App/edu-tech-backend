@@ -7,16 +7,16 @@ export class CreateReservationDto {
   @IsNotEmpty()
   salaId: number;
 
-  @ApiProperty({ example: 1, description: 'ID del usuario que reserva' })
+  @ApiProperty({ example: 1, description: 'ID del usuario que reserva, estudiante o docente' })
   @IsInt()
   @IsNotEmpty()
   userId: number;
 
-  @ApiProperty({ example: true, description: '¿Es estudiante?' })
+  @ApiProperty({ example: true, description: 'Indica si el usuario que reserva es estudiante. Para docente enviar false.' })
   @IsBoolean()
   isEstudiante: boolean;
 
-  @ApiProperty({ example: '2026-05-20', description: 'Fecha de la reserva' })
+  @ApiProperty({ example: '2026-06-15', description: 'Fecha de la reserva en formato YYYY-MM-DD' })
   @IsDateString()
   @IsNotEmpty()
   fechaReserva: string;

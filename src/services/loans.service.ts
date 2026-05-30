@@ -11,7 +11,7 @@ import { Loan, LoanStatus } from '../entities/loan.entity';
 import { Fine, FineStatus } from '../entities/fine.entity';
 import { Book, BookStatus } from '../entities/book.entity';
 import { Payment, PaymentStatus } from '../entities/payment.entity';
-import { User } from '../entities/user.entity';
+import { User, UserRole } from '../entities/user.entity';
 import { Student } from '../entities/student.entity';
 import { CreateLoanDto } from '../dto/loans/create-loan.dto';
 import { UpdateLoanDto } from '../dto/loans/update-loan.dto';
@@ -38,25 +38,23 @@ export class LoansService {
     private dataSource: DataSource,
   ) {}
 
-  private async ensureStudentProfile(estudianteId: number): Promise<Student> {
-    let estudiante = await this.studentRepository.findOneBy({ usuarioId: estudianteId });
+  private async ensureBorrowerProfile(usuarioId: number): Promise<Student> {
+    let estudiante = await this.studentRepository.findOneBy({ usuarioId });
 
     if (estudiante) {
       return estudiante;
     }
 
-    const user = await this.userRepository.findOneBy({ id: estudianteId });
+    const user = await this.userRepository.findOneBy({ id: usuarioId });
 
-    if (!user || user.rol !== 'estudiante') {
-      throw new NotFoundException(
-        `El estudiante con ID ${estudianteId} no está registrado o no tiene el rol correspondiente`,
-      );
+    if (!user || ![UserRole.ESTUDIANTE, UserRole.DOCENTE].includes(user.rol)) {
+      throw new NotFoundException(`El usuario con ID ${usuarioId} no esta habilitado para prestamos`);
     }
 
     estudiante = this.studentRepository.create({
       usuarioId: user.id,
-      codigoEstudiantil: `EST-${user.id}`,
-      carrera: 'Por definir',
+      codigoEstudiantil: user.rol === UserRole.DOCENTE ? `DOC-${user.id}` : `EST-${user.id}`,
+      carrera: user.rol === UserRole.DOCENTE ? 'Docente' : 'Por definir',
       semestreActual: 1,
     });
 
@@ -81,7 +79,7 @@ export class LoansService {
       throw new BadRequestException('El libro no está disponible para préstamo');
     }
 
-    await this.ensureStudentProfile(estudianteId);
+    await this.ensureBorrowerProfile(estudianteId);
 
     const multasPendientes = await this.fineRepository.createQueryBuilder('fine')
       .innerJoin('fine.prestamo', 'loan')
@@ -90,7 +88,7 @@ export class LoansService {
       .getCount();
 
     if (multasPendientes > 0) {
-      throw new BadRequestException('El estudiante tiene multas pendientes y no puede realizar nuevos préstamos');
+      throw new BadRequestException('El usuario tiene multas pendientes y no puede realizar nuevos prestamos');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -278,7 +276,7 @@ export class LoansService {
     }
 
     if (updateLoanDto.estudianteId) {
-      await this.ensureStudentProfile(updateLoanDto.estudianteId);
+      await this.ensureBorrowerProfile(updateLoanDto.estudianteId);
       loan.estudianteId = updateLoanDto.estudianteId;
     }
 
