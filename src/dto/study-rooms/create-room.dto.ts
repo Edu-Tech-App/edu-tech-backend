@@ -2,7 +2,10 @@ import { IsString, IsNotEmpty, IsInt, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateStudyRoomDto {
-  @ApiProperty({ example: 'Sala de Cómputo A', description: 'Nombre de la sala' })
+  @ApiProperty({
+    example: 'Sala de Cómputo A',
+    description: 'Nombre de la sala',
+  })
   @IsString()
   @IsNotEmpty()
   nombre: string;
@@ -12,7 +15,10 @@ export class CreateStudyRoomDto {
   @Min(1)
   capacidad: number;
 
-  @ApiProperty({ example: 'Piso 2, Ala Norte', description: 'Ubicación física de la sala' })
+  @ApiProperty({
+    example: 'Piso 2, Ala Norte',
+    description: 'Ubicación física de la sala',
+  })
   @IsString()
   @IsNotEmpty()
   ubicacion: string;

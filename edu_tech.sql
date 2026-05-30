@@ -189,15 +189,15 @@ CREATE TABLE IF NOT EXISTS `salas_estudio` (
   `nombre` varchar(100) NOT NULL,
   `capacidad` int NOT NULL,
   `ubicacion` varchar(100) DEFAULT NULL,
-  `estado` enum('DISPONIBLE','MANTENIMIENTO','INACTIVA') DEFAULT 'DISPONIBLE',
+  `estado` enum('ACTIVA','INACTIVA') DEFAULT 'ACTIVA',
   PRIMARY KEY (`id`),
   UNIQUE KEY `nombre` (`nombre`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Volcando datos para la tabla edu_tech.salas_estudio: ~0 rows (aproximadamente)
 INSERT INTO `salas_estudio` (`id`, `nombre`, `capacidad`, `ubicacion`, `estado`) VALUES
-	(1, 'Sala A', 10, 'Bloque 1', 'DISPONIBLE'),
-	(2, 'Sala B', 20, 'Bloque 2', 'DISPONIBLE');
+	(1, 'Sala A', 10, 'Bloque 1', 'ACTIVA'),
+	(2, 'Sala B', 20, 'Bloque 2', 'ACTIVA');
 
 -- Volcando estructura para tabla edu_tech.usuarios
 CREATE TABLE IF NOT EXISTS `usuarios` (

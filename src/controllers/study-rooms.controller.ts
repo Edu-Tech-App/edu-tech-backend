@@ -92,29 +92,29 @@ export class StudyRoomsController {
   }
 
   @Get('reservations')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   @ApiOperation({ summary: 'Listar todas las reservas de salas' })
   findAllReservations() {
     return this.studyRoomsService.findAllReservations();
   }
 
   @Get('reservations/user/:userId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   @ApiOperation({ summary: 'Listar reservas de salas por usuario' })
   findReservationsByUser(@Param('userId', ParseIntPipe) userId: number) {
     return this.studyRoomsService.findReservationsByUser(userId);
   }
 
   @Post('reservations/admin')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
-  @ApiOperation({ summary: 'Crear una reserva desde gestión administrativa' })
+  @Roles(UserRole.SUPERVISOR)
+  @ApiOperation({ summary: 'Crear una reserva desde gestión operativa' })
   adminCreateReservation(@Body() createReservationDto: AdminCreateReservationDto) {
     return this.studyRoomsService.adminCreateReservation(createReservationDto);
   }
 
   @Put('reservations/:id')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
-  @ApiOperation({ summary: 'Actualizar una reserva desde gestión administrativa' })
+  @Roles(UserRole.SUPERVISOR)
+  @ApiOperation({ summary: 'Actualizar una reserva desde gestión operativa' })
   adminUpdateReservation(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateReservationDto: AdminUpdateReservationDto,
@@ -130,15 +130,15 @@ export class StudyRoomsController {
   }
 
   @Patch('reservations/:id/admin-cancel')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
-  @ApiOperation({ summary: 'Cancelar una reserva desde gestión administrativa' })
+  @Roles(UserRole.SUPERVISOR)
+  @ApiOperation({ summary: 'Cancelar una reserva desde gestión operativa' })
   adminCancelReservation(@Param('id', ParseIntPipe) id: number) {
     return this.studyRoomsService.adminCancelReservation(id);
   }
 
   @Delete('reservations/:id')
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
-  @ApiOperation({ summary: 'Eliminar una reserva desde gestión administrativa' })
+  @Roles(UserRole.SUPERVISOR)
+  @ApiOperation({ summary: 'Eliminar una reserva desde gestión operativa' })
   adminDeleteReservation(@Param('id', ParseIntPipe) id: number) {
     return this.studyRoomsService.adminDeleteReservation(id);
   }

@@ -40,7 +40,7 @@ export class BooksController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
   create(@Body() createBookDto: CreateBookDto) {
     return this.booksService.create(createBookDto);
   }
@@ -62,7 +62,7 @@ export class BooksController {
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateBookDto: UpdateBookDto,
@@ -73,7 +73,7 @@ export class BooksController {
   @Post(':id/cover')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
   @UseInterceptors(
     FileInterceptor('cover', {
       storage: diskStorage({
@@ -112,7 +112,7 @@ export class BooksController {
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.booksService.remove(id);
   }

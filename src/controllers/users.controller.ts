@@ -1,14 +1,19 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, Get, Param, ParseIntPipe, Put, Patch, Req } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, Get, Param, ParseIntPipe, Put, Patch, Req, UseGuards } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
 import { RegisterUserDto } from '../dto/users/register-user.dto';
 import { UpdateUserDto, UpdateUserStatusDto } from '../dto/users/update-user.dto';
 import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../entities/user.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
@@ -20,23 +25,26 @@ export class UsersController {
     return this.usersService.register(registerDto);
   }
 
-  // ✅ Sin @UseGuards ni @Roles — el guard global JWT ya lo protege
   @Get()
+  @Roles(UserRole.ADMINISTRATIVO)
   async findAll() {
     return this.usersService.findAll();
   }
 
   @Get('teachers/list')
+  @Roles(UserRole.ADMINISTRATIVO)
   async findTeachers() {
     return this.usersService.findTeachers();
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMINISTRATIVO)
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOne(id);
   }
 
   @Put(':id')
+  @Roles(UserRole.ADMINISTRATIVO)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateUserDto,
@@ -45,6 +53,7 @@ export class UsersController {
   }
 
   @Patch(':id/status')
+  @Roles(UserRole.ADMINISTRATIVO)
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdateUserStatusDto,

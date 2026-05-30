@@ -39,7 +39,7 @@ export class ReportsService {
     filterDto: ReportFilterDto,
     userId: number,
   ): Promise<Buffer> {
-    const { startDate, endDate, format, periodoAcademico, asignaturaId } = filterDto;
+    const { startDate, endDate, format, periodoAcademico, asignaturaId, estudianteId } = filterDto;
 
     // Validar fechas
     this.validateDates(startDate, endDate);
@@ -57,6 +57,10 @@ export class ReportsService {
 
     if (asignaturaId) {
       query.andWhere('g.asignaturaId = :asignaturaId', { asignaturaId });
+    }
+
+    if (estudianteId) {
+      query.andWhere('g.estudianteId = :estudianteId', { estudianteId });
     }
 
     const grades = await query.getMany();
@@ -94,7 +98,7 @@ export class ReportsService {
    * Generar reporte de préstamos, devoluciones y multas
    */
   async generateLoansReport(filterDto: ReportFilterDto, userId: number): Promise<Buffer> {
-    const { startDate, endDate, format } = filterDto;
+    const { startDate, endDate, format, estudianteId } = filterDto;
 
     // Validar fechas
     this.validateDates(startDate, endDate);
@@ -103,11 +107,15 @@ export class ReportsService {
     const endDateObj = new Date(endDate);
 
     // Obtener préstamos
-    const loans = await this.loansRepository.find({
-      where: {
-        fechaPrestamo: Between(startDateObj, endDateObj),
-      },
-    });
+    const where: any = {
+      fechaPrestamo: Between(startDateObj, endDateObj),
+    };
+
+    if (estudianteId) {
+      where.estudianteId = estudianteId;
+    }
+
+    const loans = await this.loansRepository.find({ where });
 
     // Si no hay préstamos, se genera el reporte vacío (sin lanzar error)
 
