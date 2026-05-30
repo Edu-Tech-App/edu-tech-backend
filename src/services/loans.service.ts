@@ -190,6 +190,13 @@ export class LoansService {
     };
   }
 
+  async findAllPayments(): Promise<Payment[]> {
+    return this.paymentRepository.find({
+      relations: ['multa', 'multa.prestamo', 'multa.prestamo.libro', 'multa.prestamo.estudiante', 'multa.prestamo.estudiante.user'],
+      order: { fechaPago: 'DESC' },
+    });
+  }
+
   async returnLoan(id: number): Promise<Loan> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();

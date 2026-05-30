@@ -29,7 +29,7 @@ export class AuthService {
     }
 
     if (user.estado !== UserStatus.ACTIVO) {
-      throw new UnauthorizedException('Usuario inactivo o bloqueado');
+      throw new UnauthorizedException('Usuario inactivo');
     }
 
     const isPasswordValid = await bcrypt.compare(password.trim(), user.passwordHash);

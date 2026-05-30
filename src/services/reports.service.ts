@@ -61,9 +61,7 @@ export class ReportsService {
 
     const grades = await query.getMany();
 
-    if (grades.length === 0) {
-      throw new BadRequestException('No hay calificaciones para el período especificado');
-    }
+    // Si no hay calificaciones, se genera el reporte vacío (sin lanzar error)
 
     // Obtener información adicional
     const subjectsMap = new Map();
@@ -111,9 +109,7 @@ export class ReportsService {
       },
     });
 
-    if (loans.length === 0) {
-      throw new BadRequestException('No hay préstamos para el período especificado');
-    }
+    // Si no hay préstamos, se genera el reporte vacío (sin lanzar error)
 
     // Obtener información adicional
     const booksMap = new Map();
@@ -140,7 +136,7 @@ export class ReportsService {
         where: { prestamoId: loan.id },
       });
       if (fine) {
-        finesMap.set(loan.id, fine.monto);
+        finesMap.set(loan.id, Number(fine.monto));
       }
     }
 
@@ -246,7 +242,10 @@ export class ReportsService {
       doc.font('Helvetica');
       let currentY = startY + 20;
 
-      for (const grade of grades) {
+      if (grades.length === 0) {
+        doc.text('No hay calificaciones registradas para el período especificado.', startX, currentY, { align: 'left' });
+      } else {
+        for (const grade of grades) {
         currentX = startX;
         const values = [
           studentsMap.get(grade.estudianteId) || 'N/A',
@@ -260,12 +259,13 @@ export class ReportsService {
           currentX += colWidths[i];
         }
 
-        currentY += rowHeight;
+          currentY += rowHeight;
 
-        // Agregar nueva página si es necesario
-        if (currentY > 750) {
-          doc.addPage();
-          currentY = 50;
+          // Agregar nueva página si es necesario
+          if (currentY > 750) {
+            doc.addPage();
+            currentY = 50;
+          }
         }
       }
 
@@ -302,7 +302,7 @@ export class ReportsService {
         loanDate: new Date(loan.fechaPrestamo).toLocaleDateString('es-ES'),
         dueDate: new Date(loan.fechaLimiteDevolucion).toLocaleDateString('es-ES'),
         status: loan.estado || 'N/A',
-        fine: fine > 0 ? `$${fine.toFixed(2)}` : '-',
+        fine: fine > 0 ? `${Number(fine).toFixed(2)}` : '-',
       });
     }
 
@@ -365,10 +365,13 @@ export class ReportsService {
       doc.font('Helvetica');
       let currentY = startY + 16;
 
-      for (const loan of loans) {
+      if (loans.length === 0) {
+        doc.text('No hay préstamos registrados para el período especificado.', startX, currentY, { align: 'left' });
+      } else {
+        for (const loan of loans) {
         currentX = startX;
-        const fine = finesMap.get(loan.id) || 0;
-        const fineText = fine > 0 ? `$${fine.toFixed(2)}` : '-';
+        const fine = Number(finesMap.get(loan.id) || 0);
+        const fineText = fine > 0 ? `${fine.toFixed(2)}` : '-';
 
         const values = [
           studentsMap.get(loan.estudianteId) || 'N/A',
@@ -384,11 +387,12 @@ export class ReportsService {
           currentX += colWidths[i];
         }
 
-        currentY += rowHeight;
+          currentY += rowHeight;
 
-        if (currentY > 700) {
-          doc.addPage();
-          currentY = 50;
+          if (currentY > 700) {
+            doc.addPage();
+            currentY = 50;
+          }
         }
       }
 

@@ -28,6 +28,7 @@ export class StatsService {
     const totalDocentes = await this.userRepository.count({ where: { rol: UserRole.DOCENTE } });
     const totalBibliotecarios = await this.userRepository.count({ where: { rol: UserRole.BIBLIOTECARIO } });
     const totalAdministrativos = await this.userRepository.count({ where: { rol: UserRole.ADMINISTRATIVO } });
+    const totalSupervisores = await this.userRepository.count({ where: { rol: UserRole.SUPERVISOR } });
     const totalLibros = await this.bookRepository.count();
     const prestamosActivos = await this.loanRepository.count({ where: { estado: LoanStatus.ACTIVO } });
     const totalMaterias = await this.subjectRepository.count();
@@ -75,6 +76,7 @@ export class StatsService {
       totalDocentes,
       totalBibliotecarios,
       totalAdministrativos,
+      totalSupervisores,
       totalLibros,
       prestamosActivos,
       totalMaterias,

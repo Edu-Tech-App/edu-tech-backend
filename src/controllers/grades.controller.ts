@@ -38,7 +38,7 @@ export class GradesController {
   }
 
   @Get()
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.DOCENTE)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.DOCENTE)
   async findAll(
     @Query('periodo') periodoAcademico?: string,
     @Query('asignatura') asignaturaId?: number,
