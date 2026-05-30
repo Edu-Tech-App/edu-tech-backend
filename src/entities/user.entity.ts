@@ -11,11 +11,11 @@ export enum UserRole {
   DOCENTE = 'docente',
   BIBLIOTECARIO = 'bibliotecario',
   ADMINISTRATIVO = 'administrativo',
+  SUPERVISOR = 'supervisor',
 }
 
 export enum UserStatus {
   ACTIVO = 'activo',
-  BLOQUEADO = 'bloqueado',
   INACTIVO = 'inactivo',
 }
 

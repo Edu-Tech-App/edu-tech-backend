@@ -18,7 +18,7 @@ export class LoansController {
   constructor(private readonly loansService: LoansService) {}
 
   @Get('user/:userId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   findByUser(@Param('userId') userId: string) {
     return this.loansService.findByUser(+userId);
   }
@@ -31,25 +31,31 @@ export class LoansController {
 
   // ✅ Nuevo endpoint para todas las multas
   @Get('fines/all')
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   findAllFines() {
     return this.loansService.findAllFines();
   }
 
+  @Get('fines/payments/all')
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
+  findAllPayments() {
+    return this.loansService.findAllPayments();
+  }
+
   @Post()
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   create(@Body() createLoanDto: CreateLoanDto) {
     return this.loansService.create(createLoanDto);
   }
 
   @Get()
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   findAll() {
     return this.loansService.findAll();
   }
 
   @Get('student/:userId')
-  @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO, UserRole.BIBLIOTECARIO)
+  @Roles(UserRole.ESTUDIANTE, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.BIBLIOTECARIO)
   @ApiQuery({ name: 'status', required: false, enum: LoanStatus })
   @ApiQuery({ name: 'startDate', required: false, type: String, description: 'YYYY-MM-DD' })
   @ApiQuery({ name: 'endDate', required: false, type: String, description: 'YYYY-MM-DD' })
@@ -63,25 +69,25 @@ export class LoansController {
   }
 
   @Patch(':id/return')
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   returnLoan(@Param('id') id: string) {
     return this.loansService.returnLoan(+id);
   }
 
   @Put(':id')
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   update(@Param('id') id: string, @Body() updateLoanDto: UpdateLoanDto) {
     return this.loansService.update(+id, updateLoanDto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   remove(@Param('id') id: string) {
     return this.loansService.remove(+id);
   }
 
   @Post('fines/:id/pay')
-  @Roles(UserRole.ESTUDIANTE)
+  @Roles(UserRole.ESTUDIANTE, UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   payFine(@Param('id') id: string) {
     return this.loansService.payFine(+id);
   }

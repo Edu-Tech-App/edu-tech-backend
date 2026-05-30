@@ -26,4 +26,4 @@
 | HU-13 | Gestión de Catálogo (Libros) | ✅ Cumple | CRUD completo; impide baja si hay préstamos activos. |
 | HU-15 | Consulta de Multas | ✅ Cumple | Implementado en findPendingFinesByUser con detalle de libro y monto. |
 | HU-17 | Notificación Preventiva | ✅ Cumple | CronJob diario configurado para avisar sobre préstamos por vencer. |
-| HU-18 | Gestión de Cuentas | ✅ Cumple | Permite cambiar estados (ACTIVO, BLOQUEADO e INACTIVO) y registrar auditoría. |
+| HU-18 | Gestión de Cuentas | ✅ Cumple | Permite cambiar estados (ACTIVO e INACTIVO) y registrar auditoría. |

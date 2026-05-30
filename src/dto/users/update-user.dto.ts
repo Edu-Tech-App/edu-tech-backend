@@ -25,16 +25,16 @@ export class UpdateUserDto {
 
   @ApiProperty({ 
     example: 'DOCENTE', 
-    enum: ['ESTUDIANTE', 'DOCENTE', 'BIBLIOTECARIO', 'ADMINISTRATIVO'],
+    enum: ['ESTUDIANTE', 'DOCENTE', 'BIBLIOTECARIO', 'ADMINISTRATIVO', 'SUPERVISOR'],
     required: false 
   })
   @IsOptional()
-  @IsEnum(['ESTUDIANTE', 'DOCENTE', 'BIBLIOTECARIO', 'ADMINISTRATIVO'])
-  rol?: 'ESTUDIANTE' | 'DOCENTE' | 'BIBLIOTECARIO' | 'ADMINISTRATIVO';
+  @IsEnum(['ESTUDIANTE', 'DOCENTE', 'BIBLIOTECARIO', 'ADMINISTRATIVO', 'SUPERVISOR'])
+  rol?: 'ESTUDIANTE' | 'DOCENTE' | 'BIBLIOTECARIO' | 'ADMINISTRATIVO' | 'SUPERVISOR';
 }
 
 export class UpdateUserStatusDto {
-  @ApiProperty({ example: 'ACTIVO', enum: ['ACTIVO', 'BLOQUEADO', 'INACTIVO'] })
-  @IsEnum(['ACTIVO', 'BLOQUEADO', 'INACTIVO'])
-  estado: 'ACTIVO' | 'BLOQUEADO' | 'INACTIVO';
+  @ApiProperty({ example: 'ACTIVO', enum: ['ACTIVO', 'INACTIVO'] })
+  @IsEnum(['ACTIVO', 'INACTIVO'])
+  estado: 'ACTIVO' | 'INACTIVO';
 }

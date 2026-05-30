@@ -27,7 +27,7 @@ export class ReportsController {
    * Generar reporte de calificaciones
    */
   @Get('calificaciones')
-  @Roles(UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   @ApiOperation({
     summary: 'Generar reporte de calificaciones',
     description:
@@ -75,6 +75,7 @@ export class ReportsController {
       res.setHeader('Content-Type', mimeType);
       res.send(buffer);
     } catch (error) {
+      console.error('[ReportsController] Error en /reportes/calificaciones:', error);
       res.status(400).json({
         success: false,
         message: error.message || 'Error generando el reporte',
@@ -86,7 +87,7 @@ export class ReportsController {
    * Generar reporte de préstamos, devoluciones y multas
    */
   @Get('prestamos')
-  @Roles(UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   @ApiOperation({
     summary: 'Generar reporte de préstamos',
     description:
@@ -125,6 +126,7 @@ export class ReportsController {
       res.setHeader('Content-Type', mimeType);
       res.send(buffer);
     } catch (error) {
+      console.error('[ReportsController] Error en /reportes/prestamos:', error);
       res.status(400).json({
         success: false,
         message: error.message || 'Error generando el reporte',

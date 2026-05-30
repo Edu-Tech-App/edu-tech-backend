@@ -16,13 +16,13 @@ export class SubjectsController {
   constructor(private readonly subjectsService: SubjectsService) {}
 
   @Post()
-  @Roles(UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   create(@Body() createSubjectDto: CreateSubjectDto) {
     return this.subjectsService.create(createSubjectDto);
   }
 
   @Get()
-  @Roles(UserRole.ADMINISTRATIVO, UserRole.DOCENTE, UserRole.ESTUDIANTE)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR, UserRole.DOCENTE, UserRole.ESTUDIANTE)
   findAll() {
     return this.subjectsService.findAll();
   }
@@ -33,7 +33,7 @@ export class SubjectsController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateSubjectDto: UpdateSubjectDto,
@@ -42,7 +42,7 @@ export class SubjectsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMINISTRATIVO)
+  @Roles(UserRole.ADMINISTRATIVO, UserRole.SUPERVISOR)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.subjectsService.remove(id);
   }
