@@ -7,7 +7,6 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('users')
@@ -43,12 +42,21 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
+  // ✅ Cualquier usuario puede actualizar su propio perfil
   @Put(':id')
-  @Roles(UserRole.ADMINISTRATIVO)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateUserDto,
+    @Req() req: any,
   ) {
+    const requestingUserId = req.user.userId || req.user.id;
+    const isAdmin = req.user.rol === UserRole.ADMINISTRATIVO;
+
+    // Solo el mismo usuario o un admin puede actualizar
+    if (!isAdmin && requestingUserId !== id) {
+      throw new Error('No tienes permiso para actualizar este perfil');
+    }
+
     return this.usersService.update(id, updateDto);
   }
 

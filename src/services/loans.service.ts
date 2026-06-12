@@ -41,9 +41,7 @@ export class LoansService {
   private async ensureBorrowerProfile(usuarioId: number): Promise<Student> {
     let estudiante = await this.studentRepository.findOneBy({ usuarioId });
 
-    if (estudiante) {
-      return estudiante;
-    }
+    if (estudiante) return estudiante;
 
     const user = await this.userRepository.findOneBy({ id: usuarioId });
 
@@ -89,6 +87,19 @@ export class LoansService {
 
     if (multasPendientes > 0) {
       throw new BadRequestException('El usuario tiene multas pendientes y no puede realizar nuevos prestamos');
+    }
+
+    // ✅ Validar que el estudiante no tenga este mismo libro activo
+    const prestamoExistente = await this.loanRepository.findOne({
+      where: {
+        libroId,
+        estudianteId,
+        estado: LoanStatus.ACTIVO,
+      },
+    });
+
+    if (prestamoExistente) {
+      throw new BadRequestException('Ya tienes este libro prestado actualmente. Debes devolverlo antes de solicitarlo de nuevo.');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -146,10 +157,7 @@ export class LoansService {
     }
 
     if (startDate && endDate) {
-      query.andWhere('loan.fechaPrestamo BETWEEN :startDate AND :endDate', { 
-        startDate, 
-        endDate 
-      });
+      query.andWhere('loan.fechaPrestamo BETWEEN :startDate AND :endDate', { startDate, endDate });
     }
 
     query.orderBy('loan.fechaPrestamo', 'DESC');
@@ -181,11 +189,7 @@ export class LoansService {
         .map(f => f.prestamo?.estudianteId),
     ).size;
 
-    return {
-      fines,
-      totalPendiente,
-      usuariosConMultas,
-    };
+    return { fines, totalPendiente, usuariosConMultas };
   }
 
   async findAllPayments(): Promise<Payment[]> {
@@ -263,15 +267,11 @@ export class LoansService {
       relations: ['libro'],
     });
 
-    if (!loan) {
-      throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
-    }
+    if (!loan) throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
 
     if (updateLoanDto.libroId && updateLoanDto.libroId !== loan.libroId) {
       const book = await this.bookRepository.findOneBy({ id: updateLoanDto.libroId });
-      if (!book) {
-        throw new NotFoundException(`Libro con ID ${updateLoanDto.libroId} no encontrado`);
-      }
+      if (!book) throw new NotFoundException(`Libro con ID ${updateLoanDto.libroId} no encontrado`);
       loan.libroId = updateLoanDto.libroId;
     }
 
@@ -293,9 +293,7 @@ export class LoansService {
 
   async remove(id: number): Promise<void> {
     const loan = await this.loanRepository.findOneBy({ id });
-    if (!loan) {
-      throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
-    }
+    if (!loan) throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
     await this.loanRepository.remove(loan);
   }
 
@@ -359,7 +357,6 @@ export class LoansService {
     if (!multa) throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
     if (multa.estado !== FineStatus.PENDIENTE) throw new BadRequestException('La multa ya está pagada o anulada');
 
-    // Nueva simulación: 60% aprobado, 20% pendiente, 20% rechazado
     const rand = Math.random();
     let paymentStatus: PaymentStatus;
     if (rand > 0.4) {
