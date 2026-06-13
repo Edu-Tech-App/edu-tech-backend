@@ -45,11 +45,12 @@ export class ReportsService {
     this.validateDates(startDate, endDate);
 
     // Obtener calificaciones con filtros
-    const query = this.gradesRepository.createQueryBuilder('g').leftJoinAndSelect(
-      User,
-      'u',
-      'u.id = g.estudianteId',
-    );
+    const query = this.gradesRepository
+      .createQueryBuilder('g')
+      .where('g.fechaRegistro BETWEEN :startDate AND :endDate', {
+        startDate: new Date(startDate),
+        endDate: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+      });
 
     if (periodoAcademico) {
       query.andWhere('g.periodoAcademico = :periodoAcademico', { periodoAcademico });
@@ -171,6 +172,7 @@ export class ReportsService {
       { header: 'Estudiante', key: 'student', width: 25 },
       { header: 'Asignatura', key: 'subject', width: 25 },
       { header: 'Período', key: 'period', width: 12 },
+      { header: 'Corte', key: 'cut', width: 12 },
       { header: 'Calificación', key: 'grade', width: 12 },
       { header: 'Fecha de Registro', key: 'date', width: 18 },
     ];
@@ -181,6 +183,7 @@ export class ReportsService {
         student: studentsMap.get(grade.estudianteId) || 'N/A',
         subject: subjectsMap.get(grade.asignaturaId) || 'N/A',
         period: grade.periodoAcademico,
+        cut: this.getCutLabel(grade.periodoAcademico),
         grade: parseFloat(grade.valor.toString()).toFixed(2),
         date: new Date(grade.fechaRegistro).toLocaleDateString('es-ES'),
       });
@@ -231,11 +234,11 @@ export class ReportsService {
       const startX = 50;
       const startY = 150;
       const rowHeight = 20;
-      const colWidths = [150, 150, 80, 80];
+      const colWidths = [140, 140, 75, 75, 80];
 
       // Encabezados
       doc.font('Helvetica-Bold');
-      const headers = ['Estudiante', 'Asignatura', 'Período', 'Calificación'];
+      const headers = ['Estudiante', 'Asignatura', 'Período', 'Corte', 'Calificación'];
       let currentX = startX;
 
       for (let i = 0; i < headers.length; i++) {
@@ -259,6 +262,7 @@ export class ReportsService {
           studentsMap.get(grade.estudianteId) || 'N/A',
           subjectsMap.get(grade.asignaturaId) || 'N/A',
           grade.periodoAcademico,
+          this.getCutLabel(grade.periodoAcademico),
           parseFloat(grade.valor.toString()).toFixed(2),
         ];
 
@@ -433,5 +437,13 @@ export class ReportsService {
     } catch (error) {
       throw error;
     }
+  }
+
+  private getCutLabel(periodoAcademico?: string) {
+    const period = String(periodoAcademico || '').toUpperCase().replace(/[\s_-]/g, '');
+    if (period.includes('CORTE1')) return 'Corte 1';
+    if (period.includes('CORTE2')) return 'Corte 2';
+    if (period.includes('CORTE3')) return 'Corte 3';
+    return 'General';
   }
 }
