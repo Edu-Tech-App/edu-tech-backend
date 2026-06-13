@@ -58,8 +58,11 @@ import { ParticipantsModule } from './modules/participants.module';
         database: configService.get<string>('database.name'),
         autoLoadEntities: true,
         synchronize: true,
+        // `synchronize` ya crea todas las tablas a partir de las entidades.
+        // Las migraciones se desactivan para evitar el conflicto de orden
+        // (las migraciones corrían antes de que synchronize creara las tablas).
         migrations: [join(__dirname, 'migrations/*{.ts,.js}')],
-        migrationsRun: true,
+        migrationsRun: false,
         // Aiven (y la mayoría de MySQL gestionados) exigen conexión cifrada.
         // Se activa con DB_SSL=true en producción.
         ssl: configService.get<boolean>('database.ssl')
