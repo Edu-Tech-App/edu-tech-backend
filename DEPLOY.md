@@ -73,4 +73,4 @@ Cada `push` a `main` ejecuta el workflow `.github/workflows/ci-cd.yml`:
 1. Instala dependencias, lint (informativo), compila y corre los tests unitarios.
 2. Si todo pasa, dispara el Deploy Hook → Render redepliega con la última versión.
 
-La API queda disponible en `https://<tu-servicio>.onrender.com` y la documentación Swagger en `https://<tu-servicio>.onrender.com/api`.
+La API queda disponible en `https://edu-tech-backend-2wgu.onrender.com` y la documentación Swagger en `https://edu-tech-backend-2wgu.onrender.com/api`.
