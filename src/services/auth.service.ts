@@ -62,7 +62,7 @@ export class AuthService {
   }
 
   async register(userData: any) {
-    const { correoInstitucional, password, nombreCompleto, documentoIdentidad, rol } = userData;
+    const { correoInstitucional, password, nombreCompleto, documentoIdentidad } = userData;
 
     const existingUser = await this.usersRepository.findOne({ 
       where: { correoInstitucional } 
@@ -79,7 +79,7 @@ export class AuthService {
       documentoIdentidad,
       correoInstitucional: correoInstitucional.trim(),
       passwordHash: hashedPassword,
-      rol: rol || UserRole.ESTUDIANTE,
+      rol: UserRole.ESTUDIANTE,
       estado: UserStatus.ACTIVO,
     });
 

@@ -11,12 +11,14 @@ import { AuthModule } from './modules/auth.module';
 import { LoansModule } from './modules/loans.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { join } from 'path';
 import { StudyRoomsModule } from './modules/study-rooms.module';
 import { NotificationsModule } from './modules/notifications.module';
 import { SubjectsModule } from './modules/subjects.module';
 import { StatsModule } from './modules/stats.module'; // ✅ Nuevo
 import { ReportsModule } from './modules/reports.module';
 import { CatalogsModule } from './modules/catalogs.module';
+import { ParticipantsModule } from './modules/participants.module';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { CatalogsModule } from './modules/catalogs.module';
         database: configService.get<string>('database.name'),
         autoLoadEntities: true,
         synchronize: true,
+        migrations: [join(__dirname, 'migrations/*{.ts,.js}')],
+        migrationsRun: true,
         // Aiven (y la mayoría de MySQL gestionados) exigen conexión cifrada.
         // Se activa con DB_SSL=true en producción.
         ssl: configService.get<boolean>('database.ssl')
@@ -75,6 +79,7 @@ import { CatalogsModule } from './modules/catalogs.module';
     StatsModule, // ✅ Nuevo
     ReportsModule,
     CatalogsModule,
+    ParticipantsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
