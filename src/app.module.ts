@@ -55,6 +55,11 @@ import { ReportsModule } from './modules/reports.module';
         database: configService.get<string>('database.name'),
         autoLoadEntities: true,
         synchronize: true,
+        // Aiven (y la mayoría de MySQL gestionados) exigen conexión cifrada.
+        // Se activa con DB_SSL=true en producción.
+        ssl: configService.get<boolean>('database.ssl')
+          ? { rejectUnauthorized: false }
+          : undefined,
       }),
     }),
 

@@ -1,0 +1,50 @@
+name: CI/CD
+
+# Se ejecuta en cada push a main y en cada Pull Request hacia main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ---------- CI: instala, valida y compila ----------
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Lint informativo: el proyecto aún tiene errores de estilo preexistentes,
+      # por eso no bloquea el pipeline (continue-on-error). Cuando el equipo
+      # limpie esos errores, se puede quitar esta línea para hacerlo obligatorio.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Compilar (build)
+        run: npm run build
+
+      - name: Tests unitarios
+        run: npm test
+
+  # ---------- CD: dispara el deploy en Render ----------
+  deploy:
+    name: Deploy a Render
+    needs: build-and-test            # solo despliega si el CI pasó
+    runs-on: ubuntu-latest
+    # Solo en push directo a main, NO en Pull Requests
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Disparar Deploy Hook de Render
+        run: curl -fsSL "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
