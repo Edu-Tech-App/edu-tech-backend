@@ -31,6 +31,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(['ESTUDIANTE', 'DOCENTE', 'BIBLIOTECARIO', 'ADMINISTRATIVO', 'SUPERVISOR'])
   rol?: 'ESTUDIANTE' | 'DOCENTE' | 'BIBLIOTECARIO' | 'ADMINISTRATIVO' | 'SUPERVISOR';
+
+  @ApiProperty({ example: 'INGENIERIA_SISTEMAS', required: false })
+  @IsOptional()
+  @IsString()
+  carrera?: string;
 }
 
 export class UpdateUserStatusDto {

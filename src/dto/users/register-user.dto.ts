@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsEnum } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsEnum, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterUserDto {
@@ -30,4 +30,13 @@ export class RegisterUserDto {
   })
   @IsEnum(['ESTUDIANTE', 'DOCENTE', 'BIBLIOTECARIO', 'ADMINISTRATIVO', 'SUPERVISOR'])
   rol: 'ESTUDIANTE' | 'DOCENTE' | 'BIBLIOTECARIO' | 'ADMINISTRATIVO' | 'SUPERVISOR';
+
+  @ApiProperty({
+    example: 'INGENIERIA_SISTEMAS',
+    description: 'Carrera del estudiante, si aplica',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  carrera?: string;
 }

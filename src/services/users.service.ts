@@ -29,20 +29,23 @@ export class UsersService {
     return rol === 'DOCENTE' || rol === UserRole.DOCENTE;
   }
 
-  private async ensureRoleProfile(user: User) {
+  private async ensureRoleProfile(user: User, carrera?: string) {
     if (this.isStudentRole(String(user.rol))) {
-      const existingStudent = await this.studentRepository.findOne({
+      let existingStudent = await this.studentRepository.findOne({
         where: { usuarioId: user.id },
       });
 
       if (!existingStudent) {
-        const student = this.studentRepository.create({
+        existingStudent = this.studentRepository.create({
           usuarioId: user.id,
           codigoEstudiantil: `EST-${user.id}`,
-          carrera: 'Por definir',
+          carrera: carrera?.trim() || 'Por definir',
           semestreActual: 1,
         });
-        await this.studentRepository.save(student);
+        await this.studentRepository.save(existingStudent);
+      } else if (typeof carrera === 'string') {
+        existingStudent.carrera = carrera.trim() || 'Por definir';
+        await this.studentRepository.save(existingStudent);
       }
     }
 
@@ -64,7 +67,11 @@ export class UsersService {
   }
 
   async register(registerDto: RegisterUserDto) {
-    const { nombreCompleto, documentoIdentidad, correo, password, rol } = registerDto;
+    const { nombreCompleto, documentoIdentidad, correo, password, rol, carrera } = registerDto;
+
+    if (this.isStudentRole(String(rol)) && !carrera?.trim()) {
+      throw new ConflictException('La carrera es obligatoria para estudiantes');
+    }
 
     const existingUser = await this.usersRepository.findOne({
       where: { correoInstitucional: correo },
@@ -94,13 +101,14 @@ export class UsersService {
     });
 
     await this.usersRepository.save(user);
-    await this.ensureRoleProfile(user);
+    await this.ensureRoleProfile(user, carrera);
 
     const response = {
       id: user.id,
       nombreCompleto: user.nombreCompleto,
       correoInstitucional: user.correoInstitucional,
       rol: user.rol,
+      carrera: this.isStudentRole(String(user.rol)) ? (carrera?.trim() || 'Por definir') : null,
     };
 
     // El alta del usuario no debe esperar la latencia del SMTP.
@@ -152,7 +160,11 @@ export class UsersService {
     }
 
     await this.usersRepository.save(user);
-    await this.ensureRoleProfile(user);
+    await this.ensureRoleProfile(user, updateDto.carrera);
+
+    const studentProfile = this.isStudentRole(String(user.rol))
+      ? await this.studentRepository.findOne({ where: { usuarioId: user.id } })
+      : null;
 
     return {
       id: user.id,
@@ -160,6 +172,7 @@ export class UsersService {
       correoInstitucional: user.correoInstitucional,
       rol: user.rol,
       estado: user.estado,
+      carrera: studentProfile?.carrera ?? null,
     };
   }
 
@@ -202,9 +215,26 @@ export class UsersService {
   }
 
   async findOne(id: number) {
-    return this.usersRepository.findOne({
+    const user = await this.usersRepository.findOne({
       where: { id },
       select: ['id', 'nombreCompleto', 'correoInstitucional', 'rol', 'estado'],
     });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (!this.isStudentRole(String(user.rol))) {
+      return user;
+    }
+
+    const studentProfile = await this.studentRepository.findOne({
+      where: { usuarioId: user.id },
+    });
+
+    return {
+      ...user,
+      carrera: studentProfile?.carrera ?? 'Por definir',
+    };
   }
 }

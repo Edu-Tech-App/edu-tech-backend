@@ -27,7 +27,9 @@ async function bootstrap() {
   // Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('Edu-Tech API')
-    .setDescription('Documentación de la API del sistema de gestión académica y bibliotecaria')
+    .setDescription(
+      'Documentación de la API del sistema de gestión académica y bibliotecaria',
+    )
     .setVersion('1.0')
     .addBearerAuth() // Soporte para JWT
     .build();
