@@ -17,6 +17,7 @@ import { SubjectsModule } from './modules/subjects.module';
 import { StatsModule } from './modules/stats.module'; // ✅ Nuevo
 import { ReportsModule } from './modules/reports.module';
 import { CatalogsModule } from './modules/catalogs.module';
+import { ParticipantsModule } from './modules/participants.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { CatalogsModule } from './modules/catalogs.module';
     StatsModule, // ✅ Nuevo
     ReportsModule,
     CatalogsModule,
+    ParticipantsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
