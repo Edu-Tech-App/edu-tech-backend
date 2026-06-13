@@ -19,9 +19,20 @@ export class UsersController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ValidationPipe({ whitelist: true }))
+  @Roles(UserRole.ADMINISTRATIVO)
+  async createUser(@Body() registerDto: RegisterUserDto) {
+    return this.usersService.register(registerDto);
+  }
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @Public()
   async register(@Body() registerDto: RegisterUserDto) {
-    return this.usersService.register(registerDto);
+    return this.usersService.register({
+      ...registerDto,
+      rol: 'ESTUDIANTE',
+    });
   }
 
   @Get()

@@ -9,6 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthorizedParticipant } from '../entities/authorized-participant.entity';
 import { AccessParticipantDto } from '../dto/participants/access-participant.dto';
+import { ParticipantInvitationCode } from '../entities/participant-invitation-code.entity';
+import { RegisterWithInvitationDto } from '../dto/participants/register-with-invitation.dto';
 
 @Injectable()
 export class ParticipantsService implements OnModuleInit {
@@ -24,6 +26,8 @@ export class ParticipantsService implements OnModuleInit {
   constructor(
     @InjectRepository(AuthorizedParticipant)
     private readonly authorizedRepository: Repository<AuthorizedParticipant>,
+    @InjectRepository(ParticipantInvitationCode)
+    private readonly invitationCodeRepository: Repository<ParticipantInvitationCode>,
   ) {}
 
   // Al arrancar la app, registra los nombres autorizados SIN código (solo si faltan).
@@ -140,16 +144,97 @@ export class ParticipantsService implements OnModuleInit {
     return this.authorizedRepository.find({ order: { nombre: 'ASC' } });
   }
 
+  async generateInvitationCode(generadoPor?: string | null): Promise<{
+    codigo: string;
+    generadoPor: string | null;
+  }> {
+    const codigo = await this.generateUniqueCode();
+
+    await this.invitationCodeRepository.save(
+      this.invitationCodeRepository.create({
+        codigo,
+        generadoPor: generadoPor?.trim() || null,
+      }),
+    );
+
+    return {
+      codigo,
+      generadoPor: generadoPor?.trim() || null,
+    };
+  }
+
+  async registerWithInvitation(dto: RegisterWithInvitationDto): Promise<{
+    registrado: true;
+    nombre: string;
+    codigo: string;
+  }> {
+    const invitation = await this.getAvailableInvitationCode(dto.codigo);
+
+    invitation.usado = true;
+    invitation.registradoNombre = dto.nombre.trim();
+    invitation.usadoEn = new Date();
+
+    await this.invitationCodeRepository.save(invitation);
+
+    return {
+      registrado: true,
+      nombre: invitation.registradoNombre,
+      codigo: invitation.codigo,
+    };
+  }
+
+  findAllInvitationCodes(): Promise<ParticipantInvitationCode[]> {
+    return this.invitationCodeRepository.find({
+      order: { creadoEn: 'DESC' },
+    });
+  }
+
+  async validateInvitationCode(codigo: string): Promise<{
+    valido: true;
+    codigo: string;
+  }> {
+    const invitation = await this.getAvailableInvitationCode(codigo);
+
+    return {
+      valido: true,
+      codigo: invitation.codigo,
+    };
+  }
+
   // Genera un código numérico único de 6 dígitos (100000 - 999999).
   private async generateUniqueCode(): Promise<string> {
     let codigo: string;
     let yaExiste: number;
+    let yaExisteInvitacion: number;
 
     do {
       codigo = Math.floor(100000 + Math.random() * 900000).toString();
       yaExiste = await this.authorizedRepository.countBy({ codigo });
-    } while (yaExiste > 0);
+      yaExisteInvitacion = await this.invitationCodeRepository.countBy({
+        codigo,
+      });
+    } while (yaExiste > 0 || yaExisteInvitacion > 0);
 
     return codigo;
+  }
+
+  private async getAvailableInvitationCode(
+    codigo: string,
+  ): Promise<ParticipantInvitationCode> {
+    const invitation = await this.invitationCodeRepository.findOne({
+      where: { codigo },
+    });
+
+    if (!invitation) {
+      throw new UnauthorizedException('El código de invitación no existe.');
+    }
+
+    if (invitation.usado) {
+      throw new ConflictException(
+        'El código de invitación ya fue utilizado por otra persona.',
+      );
+    }
+
+    return invitation;
   }
 }
