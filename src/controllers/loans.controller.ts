@@ -67,6 +67,13 @@ export class LoansController {
     return this.loansService.findPendingFinesByUser(userId);
   }
 
+  @Get('fines/user/:userId')
+  @Roles(UserRole.ESTUDIANTE, UserRole.DOCENTE, UserRole.BIBLIOTECARIO)
+  findFinesByUser(@Param('userId') userId: number, @Req() req: any) {
+    this.assertOwnLoanResource(+userId, req);
+    return this.loansService.findFinesByUser(userId);
+  }
+
   // ✅ Nuevo endpoint para todas las multas
   @Get('fines/all')
   @Roles(UserRole.BIBLIOTECARIO, UserRole.ADMINISTRATIVO)

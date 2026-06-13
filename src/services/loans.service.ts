@@ -21,6 +21,22 @@ import { NotificationsService } from './notifications.service';
 export class LoansService {
   private readonly logger = new Logger(LoansService.name);
 
+  private parseDateOnly(value: string): Date {
+    const [year, month, day] = value.split('-').map(Number);
+
+    if (!year || !month || !day) {
+      throw new BadRequestException(`Fecha invalida: ${value}`);
+    }
+
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  private normalizeDate(value: Date): Date {
+    const normalized = new Date(value);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized;
+  }
+
   constructor(
     @InjectRepository(Loan)
     private loanRepository: Repository<Loan>,
@@ -110,7 +126,7 @@ export class LoansService {
       const nuevoPrestamo = this.loanRepository.create({
         libroId,
         estudianteId,
-        fechaLimiteDevolucion: new Date(fechaLimiteDevolucion),
+        fechaLimiteDevolucion: this.parseDateOnly(fechaLimiteDevolucion),
         estado: LoanStatus.ACTIVO,
       });
 
@@ -174,6 +190,15 @@ export class LoansService {
       .getMany();
   }
 
+  async findFinesByUser(estudianteId: number): Promise<Fine[]> {
+    return this.fineRepository.createQueryBuilder('fine')
+      .innerJoinAndSelect('fine.prestamo', 'loan')
+      .innerJoinAndSelect('loan.libro', 'libro')
+      .where('loan.estudianteId = :estudianteId', { estudianteId })
+      .orderBy('fine.fechaGeneracion', 'DESC')
+      .getMany();
+  }
+
   async findAllFines() {
     const fines = await this.fineRepository.find({
       relations: ['prestamo', 'prestamo.libro', 'prestamo.estudiante', 'prestamo.estudiante.user'],
@@ -216,10 +241,8 @@ export class LoansService {
       prestamo.fechaDevolucionReal = new Date();
       prestamo.estado = LoanStatus.DEVUELTO;
 
-      const fechaLimite = new Date(prestamo.fechaLimiteDevolucion);
-      fechaLimite.setHours(0, 0, 0, 0);
-      const fechaRealCopia = new Date(prestamo.fechaDevolucionReal);
-      fechaRealCopia.setHours(0, 0, 0, 0);
+      const fechaLimite = this.normalizeDate(prestamo.fechaLimiteDevolucion);
+      const fechaRealCopia = this.normalizeDate(prestamo.fechaDevolucionReal);
 
       const diasRetraso = Math.ceil((fechaRealCopia.getTime() - fechaLimite.getTime()) / (1000 * 3600 * 24));
 
@@ -281,7 +304,7 @@ export class LoansService {
     }
 
     if (updateLoanDto.fechaLimiteDevolucion) {
-      loan.fechaLimiteDevolucion = new Date(updateLoanDto.fechaLimiteDevolucion);
+      loan.fechaLimiteDevolucion = this.parseDateOnly(updateLoanDto.fechaLimiteDevolucion);
     }
 
     if (updateLoanDto.estado) {
@@ -356,6 +379,17 @@ export class LoansService {
     const multa = await this.fineRepository.findOneBy({ id: multaId });
     if (!multa) throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
     if (multa.estado !== FineStatus.PENDIENTE) throw new BadRequestException('La multa ya está pagada o anulada');
+
+    const existingPayment = await this.paymentRepository.findOneBy({ multaId });
+    if (existingPayment) {
+      if (existingPayment.estado === PaymentStatus.PENDIENTE) {
+        throw new BadRequestException('Ya existe un pago en revisión para esta multa');
+      }
+
+      if (existingPayment.estado === PaymentStatus.APROBADO) {
+        throw new BadRequestException('La multa ya tiene un pago aprobado');
+      }
+    }
 
     const rand = Math.random();
     let paymentStatus: PaymentStatus;
