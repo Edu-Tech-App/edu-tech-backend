@@ -62,12 +62,15 @@ export class LoansService {
     const user = await this.userRepository.findOneBy({ id: usuarioId });
 
     if (!user || ![UserRole.ESTUDIANTE, UserRole.DOCENTE].includes(user.rol)) {
-      throw new NotFoundException(`El usuario con ID ${usuarioId} no esta habilitado para prestamos`);
+      throw new NotFoundException(
+        `El usuario con ID ${usuarioId} no esta habilitado para prestamos`,
+      );
     }
 
     estudiante = this.studentRepository.create({
       usuarioId: user.id,
-      codigoEstudiantil: user.rol === UserRole.DOCENTE ? `DOC-${user.id}` : `EST-${user.id}`,
+      codigoEstudiantil:
+        user.rol === UserRole.DOCENTE ? `DOC-${user.id}` : `EST-${user.id}`,
       carrera: user.rol === UserRole.DOCENTE ? 'Docente' : 'Por definir',
       semestreActual: 1,
     });
@@ -87,22 +90,31 @@ export class LoansService {
     const { libroId, estudianteId, fechaLimiteDevolucion } = createLoanDto;
 
     const libro = await this.bookRepository.findOneBy({ id: libroId });
-    if (!libro) throw new NotFoundException(`Libro con ID ${libroId} no encontrado`);
+    if (!libro)
+      throw new NotFoundException(`Libro con ID ${libroId} no encontrado`);
 
-    if (libro.cantidadDisponible <= 0 || libro.estado !== BookStatus.DISPONIBLE) {
-      throw new BadRequestException('El libro no está disponible para préstamo');
+    if (
+      libro.cantidadDisponible <= 0 ||
+      libro.estado !== BookStatus.DISPONIBLE
+    ) {
+      throw new BadRequestException(
+        'El libro no está disponible para préstamo',
+      );
     }
 
     await this.ensureBorrowerProfile(estudianteId);
 
-    const multasPendientes = await this.fineRepository.createQueryBuilder('fine')
+    const multasPendientes = await this.fineRepository
+      .createQueryBuilder('fine')
       .innerJoin('fine.prestamo', 'loan')
       .where('loan.estudianteId = :estudianteId', { estudianteId })
       .andWhere('fine.estado = :estado', { estado: FineStatus.PENDIENTE })
       .getCount();
 
     if (multasPendientes > 0) {
-      throw new BadRequestException('El usuario tiene multas pendientes y no puede realizar nuevos prestamos');
+      throw new BadRequestException(
+        'El usuario tiene multas pendientes y no puede realizar nuevos prestamos',
+      );
     }
 
     // ✅ Validar que el estudiante no tenga este mismo libro activo
@@ -115,7 +127,9 @@ export class LoansService {
     });
 
     if (prestamoExistente) {
-      throw new BadRequestException('Ya tienes este libro prestado actualmente. Debes devolverlo antes de solicitarlo de nuevo.');
+      throw new BadRequestException(
+        'Ya tienes este libro prestado actualmente. Debes devolverlo antes de solicitarlo de nuevo.',
+      );
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -135,9 +149,11 @@ export class LoansService {
       await queryRunner.manager.save(libro);
       await queryRunner.commitTransaction();
 
-      const user = await this.userRepository.findOne({ where: { id: estudianteId } });
+      const user = await this.userRepository.findOne({
+        where: { id: estudianteId },
+      });
       if (user && user.correoInstitucional) {
-        this.notificationsService.sendLoanConfirmation(
+        void this.notificationsService.sendLoanConfirmation(
           user.correoInstitucional,
           user.nombreCompleto,
           libro.titulo,
@@ -160,8 +176,14 @@ export class LoansService {
     });
   }
 
-  async findByStudent(estudianteId: number, status?: LoanStatus, startDate?: string, endDate?: string): Promise<Loan[]> {
-    const query = this.loanRepository.createQueryBuilder('loan')
+  async findByStudent(
+    estudianteId: number,
+    status?: LoanStatus,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<Loan[]> {
+    const query = this.loanRepository
+      .createQueryBuilder('loan')
       .leftJoinAndSelect('loan.libro', 'libro')
       .leftJoinAndSelect('loan.estudiante', 'estudiante')
       .leftJoinAndSelect('estudiante.user', 'user')
@@ -173,7 +195,10 @@ export class LoansService {
     }
 
     if (startDate && endDate) {
-      query.andWhere('loan.fechaPrestamo BETWEEN :startDate AND :endDate', { startDate, endDate });
+      query.andWhere('loan.fechaPrestamo BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      });
     }
 
     query.orderBy('loan.fechaPrestamo', 'DESC');
@@ -182,7 +207,8 @@ export class LoansService {
   }
 
   async findPendingFinesByUser(estudianteId: number): Promise<Fine[]> {
-    return this.fineRepository.createQueryBuilder('fine')
+    return this.fineRepository
+      .createQueryBuilder('fine')
       .innerJoinAndSelect('fine.prestamo', 'loan')
       .innerJoinAndSelect('loan.libro', 'libro')
       .where('loan.estudianteId = :estudianteId', { estudianteId })
@@ -191,7 +217,8 @@ export class LoansService {
   }
 
   async findFinesByUser(estudianteId: number): Promise<Fine[]> {
-    return this.fineRepository.createQueryBuilder('fine')
+    return this.fineRepository
+      .createQueryBuilder('fine')
       .innerJoinAndSelect('fine.prestamo', 'loan')
       .innerJoinAndSelect('loan.libro', 'libro')
       .where('loan.estudianteId = :estudianteId', { estudianteId })
@@ -201,17 +228,22 @@ export class LoansService {
 
   async findAllFines() {
     const fines = await this.fineRepository.find({
-      relations: ['prestamo', 'prestamo.libro', 'prestamo.estudiante', 'prestamo.estudiante.user'],
+      relations: [
+        'prestamo',
+        'prestamo.libro',
+        'prestamo.estudiante',
+        'prestamo.estudiante.user',
+      ],
     });
 
     const totalPendiente = fines
-      .filter(f => f.estado === FineStatus.PENDIENTE)
+      .filter((f) => f.estado === FineStatus.PENDIENTE)
       .reduce((sum, f) => sum + Number(f.monto), 0);
 
     const usuariosConMultas = new Set(
       fines
-        .filter(f => f.estado === FineStatus.PENDIENTE)
-        .map(f => f.prestamo?.estudianteId),
+        .filter((f) => f.estado === FineStatus.PENDIENTE)
+        .map((f) => f.prestamo?.estudianteId),
     ).size;
 
     return { fines, totalPendiente, usuariosConMultas };
@@ -219,7 +251,13 @@ export class LoansService {
 
   async findAllPayments(): Promise<Payment[]> {
     return this.paymentRepository.find({
-      relations: ['multa', 'multa.prestamo', 'multa.prestamo.libro', 'multa.prestamo.estudiante', 'multa.prestamo.estudiante.user'],
+      relations: [
+        'multa',
+        'multa.prestamo',
+        'multa.prestamo.libro',
+        'multa.prestamo.estudiante',
+        'multa.prestamo.estudiante.user',
+      ],
       order: { fechaPago: 'DESC' },
     });
   }
@@ -235,8 +273,10 @@ export class LoansService {
         relations: ['libro'],
       });
 
-      if (!prestamo) throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
-      if (prestamo.estado === LoanStatus.DEVUELTO) throw new BadRequestException('El préstamo ya ha sido devuelto');
+      if (!prestamo)
+        throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
+      if (prestamo.estado === LoanStatus.DEVUELTO)
+        throw new BadRequestException('El préstamo ya ha sido devuelto');
 
       prestamo.fechaDevolucionReal = new Date();
       prestamo.estado = LoanStatus.DEVUELTO;
@@ -244,7 +284,9 @@ export class LoansService {
       const fechaLimite = this.normalizeDate(prestamo.fechaLimiteDevolucion);
       const fechaRealCopia = this.normalizeDate(prestamo.fechaDevolucionReal);
 
-      const diasRetraso = Math.ceil((fechaRealCopia.getTime() - fechaLimite.getTime()) / (1000 * 3600 * 24));
+      const diasRetraso = Math.ceil(
+        (fechaRealCopia.getTime() - fechaLimite.getTime()) / (1000 * 3600 * 24),
+      );
 
       if (diasRetraso > 0) {
         const nuevaMulta = queryRunner.manager.create(Fine, {
@@ -264,9 +306,11 @@ export class LoansService {
       const prestamoActualizado = await queryRunner.manager.save(prestamo);
       await queryRunner.commitTransaction();
 
-      const user = await this.userRepository.findOne({ where: { id: prestamo.estudianteId } });
+      const user = await this.userRepository.findOne({
+        where: { id: prestamo.estudianteId },
+      });
       if (user && user.correoInstitucional && diasRetraso > 0) {
-        this.notificationsService.sendFineNotification(
+        void this.notificationsService.sendFineNotification(
           user.correoInstitucional,
           user.nombreCompleto,
           prestamo.libro.titulo,
@@ -290,11 +334,17 @@ export class LoansService {
       relations: ['libro'],
     });
 
-    if (!loan) throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
+    if (!loan)
+      throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
 
     if (updateLoanDto.libroId && updateLoanDto.libroId !== loan.libroId) {
-      const book = await this.bookRepository.findOneBy({ id: updateLoanDto.libroId });
-      if (!book) throw new NotFoundException(`Libro con ID ${updateLoanDto.libroId} no encontrado`);
+      const book = await this.bookRepository.findOneBy({
+        id: updateLoanDto.libroId,
+      });
+      if (!book)
+        throw new NotFoundException(
+          `Libro con ID ${updateLoanDto.libroId} no encontrado`,
+        );
       loan.libroId = updateLoanDto.libroId;
     }
 
@@ -304,7 +354,9 @@ export class LoansService {
     }
 
     if (updateLoanDto.fechaLimiteDevolucion) {
-      loan.fechaLimiteDevolucion = this.parseDateOnly(updateLoanDto.fechaLimiteDevolucion);
+      loan.fechaLimiteDevolucion = this.parseDateOnly(
+        updateLoanDto.fechaLimiteDevolucion,
+      );
     }
 
     if (updateLoanDto.estado) {
@@ -316,7 +368,8 @@ export class LoansService {
 
   async remove(id: number): Promise<void> {
     const loan = await this.loanRepository.findOneBy({ id });
-    if (!loan) throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
+    if (!loan)
+      throw new NotFoundException(`Préstamo con ID ${id} no encontrado`);
     await this.loanRepository.remove(loan);
   }
 
@@ -360,16 +413,22 @@ export class LoansService {
           });
 
           if (loan?.estudiante?.user?.correoInstitucional) {
-            this.notificationsService.sendPaymentConfirmation(
-              loan.estudiante.user.correoInstitucional,
-              loan.estudiante.user.nombreCompleto,
-              multa.monto,
-              `Multa por el libro: ${loan.libro.titulo} (Procesado automáticamente)`,
-            ).catch(e => this.logger.error('Error enviando notificación:', e));
+            this.notificationsService
+              .sendPaymentConfirmation(
+                loan.estudiante.user.correoInstitucional,
+                loan.estudiante.user.nombreCompleto,
+                multa.monto,
+                `Multa por el libro: ${loan.libro.titulo} (Procesado automáticamente)`,
+              )
+              .catch((e) =>
+                this.logger.error('Error enviando notificación:', e),
+              );
           }
           this.logger.log(`Pago para multa ${multa.id} APROBADO en reintento.`);
         } else {
-          this.logger.log(`Pago para multa ${payment.multaId} RECHAZADO definitivamente en reintento.`);
+          this.logger.log(
+            `Pago para multa ${payment.multaId} RECHAZADO definitivamente en reintento.`,
+          );
         }
       }
     }
@@ -377,13 +436,17 @@ export class LoansService {
 
   async payFine(multaId: number): Promise<Payment> {
     const multa = await this.fineRepository.findOneBy({ id: multaId });
-    if (!multa) throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
-    if (multa.estado !== FineStatus.PENDIENTE) throw new BadRequestException('La multa ya está pagada o anulada');
+    if (!multa)
+      throw new NotFoundException(`Multa con ID ${multaId} no encontrada`);
+    if (multa.estado !== FineStatus.PENDIENTE)
+      throw new BadRequestException('La multa ya está pagada o anulada');
 
     const existingPayment = await this.paymentRepository.findOneBy({ multaId });
     if (existingPayment) {
       if (existingPayment.estado === PaymentStatus.PENDIENTE) {
-        throw new BadRequestException('Ya existe un pago en revisión para esta multa');
+        throw new BadRequestException(
+          'Ya existe un pago en revisión para esta multa',
+        );
       }
 
       if (existingPayment.estado === PaymentStatus.APROBADO) {
@@ -401,7 +464,8 @@ export class LoansService {
       paymentStatus = PaymentStatus.RECHAZADO;
     }
 
-    const referenciaPasarela = 'REF-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const referenciaPasarela =
+      'REF-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -427,19 +491,25 @@ export class LoansService {
         });
 
         if (loan?.estudiante?.user?.correoInstitucional) {
-          this.notificationsService.sendPaymentConfirmation(
-            loan.estudiante.user.correoInstitucional,
-            loan.estudiante.user.nombreCompleto,
-            multa.monto,
-            `Multa por el libro: ${loan.libro.titulo}`,
-          ).catch(e => console.error('Error enviando notificación de pago:', e));
+          this.notificationsService
+            .sendPaymentConfirmation(
+              loan.estudiante.user.correoInstitucional,
+              loan.estudiante.user.nombreCompleto,
+              multa.monto,
+              `Multa por el libro: ${loan.libro.titulo}`,
+            )
+            .catch((e) =>
+              console.error('Error enviando notificación de pago:', e),
+            );
         }
       }
 
       await queryRunner.commitTransaction();
 
       if (paymentStatus === PaymentStatus.RECHAZADO) {
-        throw new BadRequestException('El pago fue RECHAZADO por la pasarela simulada (Fondos insuficientes)');
+        throw new BadRequestException(
+          'El pago fue RECHAZADO por la pasarela simulada (Fondos insuficientes)',
+        );
       }
 
       return savedPayment;

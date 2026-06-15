@@ -1,4 +1,8 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 
@@ -23,12 +27,17 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest(err: any, user: any) {
     // Si hay un error de Passport o el usuario no fue encontrado/validado en la estrategia
     if (err || !user) {
-      throw err || new UnauthorizedException('No tienes permiso para acceder a este recurso');
+      throw (
+        err ||
+        new UnauthorizedException(
+          'No tienes permiso para acceder a este recurso',
+        )
+      );
     }
-    
+
     // Retorna el usuario para que esté disponible en req.user
     return user;
   }

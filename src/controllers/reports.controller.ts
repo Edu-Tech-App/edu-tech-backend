@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  Res,
-  Req,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -91,7 +83,9 @@ export class ReportsController {
         asignaturaId: query.asignaturaId
           ? parseInt(query.asignaturaId)
           : undefined,
-        estudianteId: query.estudianteId ? parseInt(query.estudianteId) : undefined,
+        estudianteId: query.estudianteId
+          ? parseInt(query.estudianteId)
+          : undefined,
       };
 
       const buffer = await this.reportsService.generateGradesReport(
@@ -169,7 +163,9 @@ export class ReportsController {
         endDate: query.endDate,
         format:
           query.format === 'excel' ? ReportFormat.EXCEL : ReportFormat.PDF,
-        estudianteId: query.estudianteId ? parseInt(query.estudianteId) : undefined,
+        estudianteId: query.estudianteId
+          ? parseInt(query.estudianteId)
+          : undefined,
       };
 
       const buffer = await this.reportsService.generateLoansReport(
