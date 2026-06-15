@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Grade } from '../entities/grade.entity';
-import { Loan, LoanStatus } from '../entities/loan.entity';
+import { Loan } from '../entities/loan.entity';
 import { Fine } from '../entities/fine.entity';
 import { Book } from '../entities/book.entity';
 import { Subject } from '../entities/subject.entity';
@@ -10,8 +10,10 @@ import { User } from '../entities/user.entity';
 import { Student } from '../entities/student.entity';
 import PDFDocument from 'pdfkit';
 import * as ExcelJS from 'exceljs';
-import { Readable } from 'stream';
-import { ReportFilterDto, ReportFormat, ReportType } from '../dto/reports/report-filter.dto';
+import {
+  ReportFilterDto,
+  ReportFormat,
+} from '../dto/reports/report-filter.dto';
 
 @Injectable()
 export class ReportsService {
@@ -37,9 +39,16 @@ export class ReportsService {
    */
   async generateGradesReport(
     filterDto: ReportFilterDto,
-    userId: number,
+    _userId: number,
   ): Promise<Buffer> {
-    const { startDate, endDate, format, periodoAcademico, asignaturaId, estudianteId } = filterDto;
+    const {
+      startDate,
+      endDate,
+      format,
+      periodoAcademico,
+      asignaturaId,
+      estudianteId,
+    } = filterDto;
 
     // Validar fechas
     this.validateDates(startDate, endDate);
@@ -53,7 +62,9 @@ export class ReportsService {
       });
 
     if (periodoAcademico) {
-      query.andWhere('g.periodoAcademico = :periodoAcademico', { periodoAcademico });
+      query.andWhere('g.periodoAcademico = :periodoAcademico', {
+        periodoAcademico,
+      });
     }
 
     if (asignaturaId) {
@@ -91,14 +102,22 @@ export class ReportsService {
     if (format === ReportFormat.EXCEL) {
       return await this.generateGradesExcel(grades, subjectsMap, studentsMap);
     } else {
-      return await this.generateGradesPDF(grades, subjectsMap, studentsMap, periodoAcademico);
+      return await this.generateGradesPDF(
+        grades,
+        subjectsMap,
+        studentsMap,
+        periodoAcademico,
+      );
     }
   }
 
   /**
    * Generar reporte de préstamos, devoluciones y multas
    */
-  async generateLoansReport(filterDto: ReportFilterDto, userId: number): Promise<Buffer> {
+  async generateLoansReport(
+    filterDto: ReportFilterDto,
+    _userId: number,
+  ): Promise<Buffer> {
     const { startDate, endDate, format, estudianteId } = filterDto;
 
     // Validar fechas
@@ -150,9 +169,19 @@ export class ReportsService {
     }
 
     if (format === ReportFormat.EXCEL) {
-      return await this.generateLoansExcel(loans, booksMap, studentsMap, finesMap);
+      return await this.generateLoansExcel(
+        loans,
+        booksMap,
+        studentsMap,
+        finesMap,
+      );
     } else {
-      return await this.generateLoansPDF(loans, booksMap, studentsMap, finesMap);
+      return await this.generateLoansPDF(
+        loans,
+        booksMap,
+        studentsMap,
+        finesMap,
+      );
     }
   }
 
@@ -218,15 +247,24 @@ export class ReportsService {
       doc.on('error', reject);
 
       // Título
-      doc.fontSize(20).font('Helvetica-Bold').text('Reporte de Calificaciones', {
-        align: 'center',
-      });
-      doc.fontSize(12).font('Helvetica').text(`Período: ${period || 'Múltiples'}`, {
-        align: 'center',
-      });
-      doc.text(`Fecha de Generación: ${new Date().toLocaleDateString('es-ES')}`, {
-        align: 'center',
-      });
+      doc
+        .fontSize(20)
+        .font('Helvetica-Bold')
+        .text('Reporte de Calificaciones', {
+          align: 'center',
+        });
+      doc
+        .fontSize(12)
+        .font('Helvetica')
+        .text(`Período: ${period || 'Múltiples'}`, {
+          align: 'center',
+        });
+      doc.text(
+        `Fecha de Generación: ${new Date().toLocaleDateString('es-ES')}`,
+        {
+          align: 'center',
+        },
+      );
       doc.moveDown();
 
       // Tabla
@@ -238,38 +276,58 @@ export class ReportsService {
 
       // Encabezados
       doc.font('Helvetica-Bold');
-      const headers = ['Estudiante', 'Asignatura', 'Período', 'Corte', 'Calificación'];
+      const headers = [
+        'Estudiante',
+        'Asignatura',
+        'Período',
+        'Corte',
+        'Calificación',
+      ];
       let currentX = startX;
 
       for (let i = 0; i < headers.length; i++) {
-        doc.text(headers[i], currentX, startY, { width: colWidths[i], align: 'left' });
+        doc.text(headers[i], currentX, startY, {
+          width: colWidths[i],
+          align: 'left',
+        });
         currentX += colWidths[i];
       }
 
       // Línea separadora
-      doc.moveTo(startX, startY + 15).lineTo(startX + colWidths.reduce((a, b) => a + b), startY + 15).stroke();
+      doc
+        .moveTo(startX, startY + 15)
+        .lineTo(startX + colWidths.reduce((a, b) => a + b), startY + 15)
+        .stroke();
 
       // Datos
       doc.font('Helvetica');
       let currentY = startY + 20;
 
       if (grades.length === 0) {
-        doc.text('No hay calificaciones registradas para el período especificado.', startX, currentY, { align: 'left' });
+        doc.text(
+          'No hay calificaciones registradas para el período especificado.',
+          startX,
+          currentY,
+          { align: 'left' },
+        );
       } else {
         for (const grade of grades) {
-        currentX = startX;
-        const values = [
-          studentsMap.get(grade.estudianteId) || 'N/A',
-          subjectsMap.get(grade.asignaturaId) || 'N/A',
-          grade.periodoAcademico,
-          this.getCutLabel(grade.periodoAcademico),
-          parseFloat(grade.valor.toString()).toFixed(2),
-        ];
+          currentX = startX;
+          const values = [
+            studentsMap.get(grade.estudianteId) || 'N/A',
+            subjectsMap.get(grade.asignaturaId) || 'N/A',
+            grade.periodoAcademico,
+            this.getCutLabel(grade.periodoAcademico),
+            parseFloat(grade.valor.toString()).toFixed(2),
+          ];
 
-        for (let i = 0; i < values.length; i++) {
-          doc.text(values[i], currentX, currentY, { width: colWidths[i], align: 'left' });
-          currentX += colWidths[i];
-        }
+          for (let i = 0; i < values.length; i++) {
+            doc.text(values[i], currentX, currentY, {
+              width: colWidths[i],
+              align: 'left',
+            });
+            currentX += colWidths[i];
+          }
 
           currentY += rowHeight;
 
@@ -312,7 +370,9 @@ export class ReportsService {
         student: studentsMap.get(loan.estudianteId) || 'N/A',
         book: booksMap.get(loan.libroId) || 'N/A',
         loanDate: new Date(loan.fechaPrestamo).toLocaleDateString('es-ES'),
-        dueDate: new Date(loan.fechaLimiteDevolucion).toLocaleDateString('es-ES'),
+        dueDate: new Date(loan.fechaLimiteDevolucion).toLocaleDateString(
+          'es-ES',
+        ),
         status: loan.estado || 'N/A',
         fine: fine > 0 ? `${Number(fine).toFixed(2)}` : '-',
       });
@@ -346,12 +406,21 @@ export class ReportsService {
       doc.on('error', reject);
 
       // Título
-      doc.fontSize(20).font('Helvetica-Bold').text('Reporte de Préstamos, Devoluciones y Multas', {
-        align: 'center',
-      });
-      doc.fontSize(12).font('Helvetica').text(`Fecha de Generación: ${new Date().toLocaleDateString('es-ES')}`, {
-        align: 'center',
-      });
+      doc
+        .fontSize(20)
+        .font('Helvetica-Bold')
+        .text('Reporte de Préstamos, Devoluciones y Multas', {
+          align: 'center',
+        });
+      doc
+        .fontSize(12)
+        .font('Helvetica')
+        .text(
+          `Fecha de Generación: ${new Date().toLocaleDateString('es-ES')}`,
+          {
+            align: 'center',
+          },
+        );
       doc.moveDown();
 
       // Tabla
@@ -363,41 +432,62 @@ export class ReportsService {
 
       // Encabezados
       doc.font('Helvetica-Bold');
-      const headers = ['Estudiante', 'Libro', 'F. Préstamo', 'F. Devolución', 'Estado', 'Multa'];
+      const headers = [
+        'Estudiante',
+        'Libro',
+        'F. Préstamo',
+        'F. Devolución',
+        'Estado',
+        'Multa',
+      ];
       let currentX = startX;
 
       for (let i = 0; i < headers.length; i++) {
-        doc.text(headers[i], currentX, startY, { width: colWidths[i], align: 'left' });
+        doc.text(headers[i], currentX, startY, {
+          width: colWidths[i],
+          align: 'left',
+        });
         currentX += colWidths[i];
       }
 
-      doc.moveTo(startX, startY + 12).lineTo(startX + colWidths.reduce((a, b) => a + b), startY + 12).stroke();
+      doc
+        .moveTo(startX, startY + 12)
+        .lineTo(startX + colWidths.reduce((a, b) => a + b), startY + 12)
+        .stroke();
 
       // Datos
       doc.font('Helvetica');
       let currentY = startY + 16;
 
       if (loans.length === 0) {
-        doc.text('No hay préstamos registrados para el período especificado.', startX, currentY, { align: 'left' });
+        doc.text(
+          'No hay préstamos registrados para el período especificado.',
+          startX,
+          currentY,
+          { align: 'left' },
+        );
       } else {
         for (const loan of loans) {
-        currentX = startX;
-        const fine = Number(finesMap.get(loan.id) || 0);
-        const fineText = fine > 0 ? `${fine.toFixed(2)}` : '-';
+          currentX = startX;
+          const fine = Number(finesMap.get(loan.id) || 0);
+          const fineText = fine > 0 ? `${fine.toFixed(2)}` : '-';
 
-        const values = [
-          studentsMap.get(loan.estudianteId) || 'N/A',
-          booksMap.get(loan.libroId) || 'N/A',
-          new Date(loan.fechaPrestamo).toLocaleDateString('es-ES'),
-          new Date(loan.fechaLimiteDevolucion).toLocaleDateString('es-ES'),
-          loan.estado || 'N/A',
-          fineText,
-        ];
+          const values = [
+            studentsMap.get(loan.estudianteId) || 'N/A',
+            booksMap.get(loan.libroId) || 'N/A',
+            new Date(loan.fechaPrestamo).toLocaleDateString('es-ES'),
+            new Date(loan.fechaLimiteDevolucion).toLocaleDateString('es-ES'),
+            loan.estado || 'N/A',
+            fineText,
+          ];
 
-        for (let i = 0; i < values.length; i++) {
-          doc.text(values[i], currentX, currentY, { width: colWidths[i], align: 'left' });
-          currentX += colWidths[i];
-        }
+          for (let i = 0; i < values.length; i++) {
+            doc.text(values[i], currentX, currentY, {
+              width: colWidths[i],
+              align: 'left',
+            });
+            currentX += colWidths[i];
+          }
 
           currentY += rowHeight;
 
@@ -416,31 +506,36 @@ export class ReportsService {
    * Validar rango de fechas
    */
   private validateDates(startDate: string, endDate: string) {
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        throw new BadRequestException('Formato de fecha inválido. Use YYYY-MM-DD');
-      }
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new BadRequestException(
+        'Formato de fecha inválido. Use YYYY-MM-DD',
+      );
+    }
 
-      if (start > end) {
-        throw new BadRequestException('La fecha de inicio no puede ser mayor a la fecha de fin');
-      }
+    if (start > end) {
+      throw new BadRequestException(
+        'La fecha de inicio no puede ser mayor a la fecha de fin',
+      );
+    }
 
-      // Validar que no sea más de 12 meses
-      const diffMonths =
-        (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-      if (diffMonths > 12) {
-        throw new BadRequestException('El rango de fechas no puede exceder 12 meses');
-      }
-    } catch (error) {
-      throw error;
+    // Validar que no sea más de 12 meses
+    const diffMonths =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+    if (diffMonths > 12) {
+      throw new BadRequestException(
+        'El rango de fechas no puede exceder 12 meses',
+      );
     }
   }
 
   private getCutLabel(periodoAcademico?: string) {
-    const period = String(periodoAcademico || '').toUpperCase().replace(/[\s_-]/g, '');
+    const period = String(periodoAcademico || '')
+      .toUpperCase()
+      .replace(/[\s_-]/g, '');
     if (period.includes('CORTE1')) return 'Corte 1';
     if (period.includes('CORTE2')) return 'Corte 2';
     if (period.includes('CORTE3')) return 'Corte 3';

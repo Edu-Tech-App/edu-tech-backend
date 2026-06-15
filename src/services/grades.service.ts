@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Grade } from '../entities/grade.entity';
@@ -20,7 +25,8 @@ export class GradesService {
   ) {}
 
   async create(createGradeDto: CreateGradeDto, docenteId: number) {
-    const { estudianteId, asignaturaId, periodoAcademico, valor } = createGradeDto;
+    const { estudianteId, asignaturaId, periodoAcademico, valor } =
+      createGradeDto;
 
     if (valor < 0 || valor > 5) {
       throw new BadRequestException('La nota debe estar entre 0 y 5');
@@ -31,17 +37,23 @@ export class GradesService {
     });
 
     if (!docente || docente.rol !== UserRole.DOCENTE) {
-      throw new ForbiddenException('Solo los docentes pueden registrar calificaciones');
+      throw new ForbiddenException(
+        'Solo los docentes pueden registrar calificaciones',
+      );
     }
 
-    const asignatura = await this.subjectsRepository.findOne({ where: { id: asignaturaId } });
+    const asignatura = await this.subjectsRepository.findOne({
+      where: { id: asignaturaId },
+    });
     if (!asignatura) {
       throw new NotFoundException('Asignatura no encontrada');
     }
 
     //Validación de titularidad (HU-03)
     if (asignatura.docenteId !== docenteId) {
-      throw new ForbiddenException('No eres el docente titular asignado a esta asignatura');
+      throw new ForbiddenException(
+        'No eres el docente titular asignado a esta asignatura',
+      );
     }
 
     const grade = this.gradesRepository.create({
@@ -55,14 +67,16 @@ export class GradesService {
     const savedGrade = await this.gradesRepository.save(grade);
 
     // Notificar al estudiante
-    const user = await this.usersRepository.findOne({ where: { id: estudianteId } });
-    
+    const user = await this.usersRepository.findOne({
+      where: { id: estudianteId },
+    });
+
     if (user && user.correoInstitucional) {
-      this.notificationsService.sendGradeNotification(
+      void this.notificationsService.sendGradeNotification(
         user.correoInstitucional,
         user.nombreCompleto,
         asignatura.nombre,
-        valor
+        valor,
       );
     }
 
@@ -84,11 +98,15 @@ export class GradesService {
       throw new NotFoundException('Calificación no encontrada');
     }
 
-    const asignatura = await this.subjectsRepository.findOne({ where: { id: grade.asignaturaId } });
-    
+    const asignatura = await this.subjectsRepository.findOne({
+      where: { id: grade.asignaturaId },
+    });
+
     // ✅ Validación de titularidad (HU-04)
     if (!asignatura || asignatura.docenteId !== docenteId) {
-      throw new ForbiddenException('No eres el docente titular asignado a esta asignatura y no puedes modificar la nota');
+      throw new ForbiddenException(
+        'No eres el docente titular asignado a esta asignatura y no puedes modificar la nota',
+      );
     }
 
     grade.valorAnterior = grade.valor;
@@ -98,15 +116,17 @@ export class GradesService {
     const savedGrade = await this.gradesRepository.save(grade);
 
     // Notificar al estudiante
-    const user = await this.usersRepository.findOne({ where: { id: grade.estudianteId } });
-    
+    const user = await this.usersRepository.findOne({
+      where: { id: grade.estudianteId },
+    });
+
     if (user && user.correoInstitucional) {
-      this.notificationsService.sendGradeNotification(
+      void this.notificationsService.sendGradeNotification(
         user.correoInstitucional,
         user.nombreCompleto,
         asignatura ? asignatura.nombre : 'Asignatura ID: ' + grade.asignaturaId,
         valor,
-        true
+        true,
       );
     }
 
@@ -114,31 +134,39 @@ export class GradesService {
   }
 
   async findAll(filters: { periodoAcademico?: string; asignaturaId?: number }) {
-    const query = this.gradesRepository.createQueryBuilder('grade')
+    const query = this.gradesRepository
+      .createQueryBuilder('grade')
       .leftJoinAndSelect('grade.estudiante', 'estudiante')
       .leftJoinAndSelect('estudiante.user', 'studentUser')
       .leftJoinAndSelect('grade.asignatura', 'asignatura');
 
     if (filters.periodoAcademico) {
-      query.andWhere('grade.periodoAcademico = :periodo', { periodo: filters.periodoAcademico });
+      query.andWhere('grade.periodoAcademico = :periodo', {
+        periodo: filters.periodoAcademico,
+      });
     }
 
     if (filters.asignaturaId) {
-      query.andWhere('grade.asignaturaId = :asignaturaId', { asignaturaId: filters.asignaturaId });
+      query.andWhere('grade.asignaturaId = :asignaturaId', {
+        asignaturaId: filters.asignaturaId,
+      });
     }
 
     return query.getMany();
   }
 
   async findByEstudiante(estudianteId: number, periodoAcademico?: string) {
-    const query = this.gradesRepository.createQueryBuilder('grade')
+    const query = this.gradesRepository
+      .createQueryBuilder('grade')
       .leftJoinAndSelect('grade.estudiante', 'estudiante')
       .leftJoinAndSelect('estudiante.user', 'studentUser')
       .leftJoinAndSelect('grade.asignatura', 'asignatura')
       .where('grade.estudianteId = :estudianteId', { estudianteId });
 
     if (periodoAcademico) {
-      query.andWhere('grade.periodoAcademico = :periodo', { periodo: periodoAcademico });
+      query.andWhere('grade.periodoAcademico = :periodo', {
+        periodo: periodoAcademico,
+      });
     }
 
     return query.getMany();

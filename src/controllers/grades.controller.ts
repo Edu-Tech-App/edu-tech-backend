@@ -1,9 +1,24 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UsePipes, ValidationPipe, Get, Param, ParseIntPipe, UseGuards, Query, Req, Put, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UsePipes,
+  ValidationPipe,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+  Query,
+  Req,
+  Put,
+  ForbiddenException,
+} from '@nestjs/common';
 import { GradesService } from '../services/grades.service';
 import { CreateGradeDto, UpdateGradeDto } from '../dto/grades/grade.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../entities/user.entity';
 
@@ -43,7 +58,10 @@ export class GradesController {
     @Query('periodo') periodoAcademico?: string,
     @Query('asignatura') asignaturaId?: number,
   ) {
-    return this.gradesService.findAll({ periodoAcademico, asignaturaId: Number(asignaturaId) });
+    return this.gradesService.findAll({
+      periodoAcademico,
+      asignaturaId: Number(asignaturaId),
+    });
   }
 
   @Get('estudiante/:id')
@@ -54,11 +72,13 @@ export class GradesController {
   ) {
     const userId = req.user.userId;
     const userRol = req.user.rol;
-    
+
     if (userRol === UserRole.ESTUDIANTE && id !== userId) {
-      throw new ForbiddenException('No puedes ver las calificaciones de otros estudiantes');
+      throw new ForbiddenException(
+        'No puedes ver las calificaciones de otros estudiantes',
+      );
     }
-    
+
     return this.gradesService.findByEstudiante(id, periodoAcademico);
   }
 

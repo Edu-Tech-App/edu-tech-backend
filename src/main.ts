@@ -49,4 +49,4 @@ async function bootstrap() {
   console.log(`Backend disponible en: ${appUrl}`);
   console.log(`Swagger disponible en: ${swaggerUrl}`);
 }
-bootstrap();
+void bootstrap();
